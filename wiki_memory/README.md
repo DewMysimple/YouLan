@@ -10,12 +10,14 @@ source_logs:
 supersedes: null
 ---
 
-# 幽兰工程记忆
+# 幽兰 wiki_memory
 
 本目录保存幽兰 Three.js 模型查看器的可审计工程记忆。根目录 `AGENTS.md` 是程序性协议，代码、配置、Blender 源文件和本地 Three.js 示例仍是最终事实来源。
 
 ## 核心入口
 
+- [[AGENTS|记忆维护协议原文]]
+- [[llm-wiki|LLM Wiki 理念参考]]
 - [[当前状态/项目概览|项目概览]]
 - [[当前状态/系统架构|系统架构]]
 - [[当前状态/当前约束|当前约束]]
@@ -31,6 +33,6 @@ supersedes: null
 ## 维护命令
 
 ```text
-python 工程记忆/工具/memory_lint.py index
-python 工程记忆/工具/memory_lint.py check
+python wiki_memory/工具/memory_lint.py index
+python wiki_memory/工具/memory_lint.py check
 ```

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""检查工程记忆 Markdown，并重建单一工作日志索引。"""
+"""检查 wiki_memory Markdown，并重建单一工作日志索引。"""
 
 from __future__ import annotations
 
@@ -58,7 +58,9 @@ def is_managed(path: Path) -> bool:
 
 
 def is_context_source(path: Path) -> bool:
-    return is_managed(path) or (len(path.parts) == 1 and path.name == "README.md")
+    return is_managed(path) or (
+        len(path.parts) == 1 and path.name in {"README.md", "AGENTS.md", "llm-wiki.md"}
+    )
 
 
 def parse_scalar(raw: str) -> object:
@@ -248,7 +250,7 @@ def index_logs(root: Path, pages: list[Page]) -> Path:
             "",
             "## 使用方式",
             "",
-            "- 由 `python 工程记忆/工具/memory_lint.py index` 生成或刷新。",
+            "- 由 `python wiki_memory/工具/memory_lint.py index` 生成或刷新。",
             "- 查询时先阅读当前状态，再按关键词定位日志。",
             "",
             "## 入口",
