@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-  background: #000;
+  background: #fff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -24,7 +24,7 @@ body {
   margin: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  background: #000;
+  background: #fff;
 }
 
 button,
@@ -70,6 +70,26 @@ select {
   top: 10px !important;
   right: 10px !important;
   max-height: calc(100vh - 20px);
+}
+
+.lil-gui input {
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer-panel-status {
+  padding: 6px 8px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer-panel-status[data-kind="error"] {
+  color: #ffb4ab;
+}
+
+.viewer-panel-status[data-kind="warning"] {
+  color: #ffdb96;
 }
 
 @media (max-width: 640px) {

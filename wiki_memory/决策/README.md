@@ -6,6 +6,7 @@ importance: high
 updated: 2026-09-03
 topic: decisions-index
 source_logs:
+  - "[[日志/2026-09-03-增加HDRI设置与基础阵列]]"
   - "[[日志/2026-09-03-构建工程记忆并修正视角控制]]"
   - "[[日志/2026-09-03-替换单网格双材质槽模型]]"
 supersedes: null
@@ -15,6 +16,7 @@ supersedes: null
 
 ## 当前决策
 
+- [[决策/ADR-004-HDRI与可叠加基础阵列|ADR-004：HDRI 与可叠加基础阵列]]
 - [[决策/ADR-003-单网格双材质槽接入|ADR-003：单网格双材质槽接入]]
 - [[决策/ADR-002-模型转为标准Three视角坐标|ADR-002：模型转为标准 Three 视角坐标]]
 

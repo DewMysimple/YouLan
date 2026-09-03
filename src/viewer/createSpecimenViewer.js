@@ -1,15 +1,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from '../../source/threejs-transmission/examples/jsm/controls/OrbitControls.js';
-import { UltraHDRLoader } from '../../source/threejs-transmission/examples/jsm/loaders/UltraHDRLoader.js';
 import { GUI } from '../../source/threejs-transmission/examples/jsm/libs/lil-gui.module.min.js';
 import { prepareSpecimenMesh } from './specimenModel.js';
+import { createEnvironmentManager } from './environmentManager.js';
+import { bindEnvironmentPanel, bindArrayPanel } from './viewerPanels.js';
+import { fitArray } from './arrayModifier.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
-const HDR_URL = new URL(
-  '../../source/threejs-transmission/examples/textures/equirectangular/royal_esplanade_2k.hdr.jpg',
-  import.meta.url,
-).href;
 
 const DEFAULT_MATERIAL_PARAMETERS = Object.freeze({
   color: '#ffffff',
@@ -48,7 +46,7 @@ function createTransmissionMaterial(parameters, environmentTexture) {
   });
 }
 
-function bindMaterialFolder(folder, parameters, material, requestRender) {
+function bindMaterialFolder(folder, parameters, material, requestRender, updateEnvironment) {
   folder
     .addColor(parameters, 'color')
     .name('颜色')
@@ -124,10 +122,7 @@ function bindMaterialFolder(folder, parameters, material, requestRender) {
   folder
     .add(parameters, 'envMapIntensity', 0, 1, 0.01)
     .name('环境贴图强度')
-    .onChange((value) => {
-      material.envMapIntensity = value;
-      requestRender();
-    });
+    .onChange(updateEnvironment);
 }
 
 function disposeObjectResources(root) {
@@ -216,7 +211,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let renderFrame = 0;
   let gui = null;
   let loadedModel = null;
-  let environmentTexture = null;
+  let disposeEnvironmentPanel = null;
+  let disposeArrayPanel = null;
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
@@ -226,6 +222,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
+  scene.background = new THREE.Color('#ffffff');
   const camera = new THREE.PerspectiveCamera(
     40,
     Math.max(container.clientWidth, 1) / Math.max(container.clientHeight, 1),
@@ -245,6 +242,11 @@ export function createSpecimenViewer(container, { onError } = {}) {
   };
 
   controls.addEventListener('change', requestRender);
+  const environment = createEnvironmentManager(scene, requestRender, {
+    maxTextureSize: renderer.capabilities.maxTextureSize,
+  });
+  gui = new GUI({ title: '材质参数', width: 300 });
+  disposeEnvironmentPanel = bindEnvironmentPanel(gui, environment);
 
   const resizeObserver = new ResizeObserver(() => {
     if (disposed) return;
@@ -262,30 +264,17 @@ export function createSpecimenViewer(container, { onError } = {}) {
   resizeObserver.observe(container);
 
   const loadScene = async () => {
-    const [loadedEnvironment, gltf] = await Promise.all([
-      new UltraHDRLoader().loadAsync(HDR_URL),
-      new GLTFLoader().loadAsync(MODEL_URL),
-    ]);
+    const gltf = await new GLTFLoader().loadAsync(MODEL_URL);
 
     if (disposed) {
-      loadedEnvironment.dispose();
       disposeObjectResources(gltf.scene);
       return;
     }
-
-    environmentTexture = loadedEnvironment;
-    environmentTexture.mapping = THREE.EquirectangularReflectionMapping;
-    scene.background = environmentTexture;
-    scene.environment = environmentTexture;
 
     let specimenMesh;
     try {
       specimenMesh = prepareSpecimenMesh(gltf.scene);
     } catch (error) {
-      scene.background = null;
-      scene.environment = null;
-      loadedEnvironment.dispose();
-      environmentTexture = null;
       disposeObjectResources(gltf.scene);
       throw error;
     }
@@ -294,11 +283,11 @@ export function createSpecimenViewer(container, { onError } = {}) {
     const innerParameters = createMaterialParameters(specimenMesh.material[1]);
     const outerMaterial = createTransmissionMaterial(
       outerParameters,
-      environmentTexture,
+      scene.environment,
     );
     const innerMaterial = createTransmissionMaterial(
       innerParameters,
-      environmentTexture,
+      scene.environment,
     );
 
     outerMaterial.name = '外框插槽';
@@ -309,7 +298,14 @@ export function createSpecimenViewer(container, { onError } = {}) {
     scene.add(loadedModel);
     frameModel(camera, controls, loadedModel);
 
-    gui = new GUI({ title: '材质参数', width: 300 });
+    environment.setMaterials([
+      { material: outerMaterial, parameters: outerParameters },
+      { material: innerMaterial, parameters: innerParameters },
+    ]);
+    disposeArrayPanel = bindArrayPanel(gui, specimenMesh, requestRender, () => {
+      fitArray(camera, controls, loadedModel);
+      requestRender();
+    });
 
     const outerFolder = gui.addFolder('外框插槽管理');
     bindMaterialFolder(
@@ -317,6 +313,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       outerParameters,
       outerMaterial,
       requestRender,
+      environment.apply,
     );
 
     const innerFolder = gui.addFolder('内框插槽管理');
@@ -325,6 +322,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       innerParameters,
       innerMaterial,
       requestRender,
+      environment.apply,
     );
 
     const renderParameters = {
@@ -332,6 +330,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
       transmissionResolutionScale: 1,
     };
     const renderFolder = gui.addFolder('渲染设置');
+    outerFolder.close();
+    innerFolder.close();
+    renderFolder.close();
 
     renderFolder
       .add(renderParameters, 'exposure', 0, 1, 0.01)
@@ -373,16 +374,15 @@ export function createSpecimenViewer(container, { onError } = {}) {
     resizeObserver.disconnect();
     controls.removeEventListener('change', requestRender);
     controls.dispose();
+    disposeArrayPanel?.();
+    disposeEnvironmentPanel?.();
+    environment.dispose();
     gui?.destroy();
 
     if (loadedModel) {
       scene.remove(loadedModel);
       disposeObjectResources(loadedModel);
     }
-
-    scene.background = null;
-    scene.environment = null;
-    environmentTexture?.dispose();
 
     renderer.dispose();
     renderer.forceContextLoss();
