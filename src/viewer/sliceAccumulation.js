@@ -92,6 +92,7 @@ export function createSliceAccumulation(renderer) {
   let proxy = null;
   let baseIndexCount = 0;
   let disposed = false;
+  let externalCounts = false;
   let target = null;
   let countScene = null;
   let countMaterials = [];
@@ -144,7 +145,7 @@ export function createSliceAccumulation(renderer) {
       source.geometry.index.count > baseIndexCount;
     uniforms.sliceSettings.value.set(active ? 1 : 0, parameters.strength, parameters.limit);
     uniforms.sliceClarity.value = scene.background?.isTexture ? parameters.clarity : 0;
-    if (!active) {
+    if (!active && !(supported && source && externalCounts)) {
       releaseTarget();
       renderer.render(scene, camera);
       return;
@@ -205,5 +206,8 @@ export function createSliceAccumulation(renderer) {
   function setCore(core) {
     if (countMaterials[0]) core.patchCountMaterial(countMaterials[0]);
   }
-  return { parameters, state, attach, setCore, render, dispose };
+  return { parameters, state, attach, setCore, render, dispose,
+    requireCounts(value) { externalCounts = Boolean(value); },
+    optics() { return { texture: target?.texture ?? null }; },
+  };
 }

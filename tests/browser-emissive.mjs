@@ -113,8 +113,9 @@ try {
   assert.equal((await state())[1][2],0.35);
   assert.equal(await evaluate(`(()=>{const r=controller(['内框插槽管理'],'自发光强度').getBoundingClientRect();return r.top>=0&&r.bottom<=844;})()`),true);
   // Refresh restores the delivered depth preset (not the neutral test fixture).
-  await b.open();
-  assert.deepEqual(await state(),[['f3faff','fff0db',0.8],['d1aaff','ffe4fa',1.8]]);
+  await b.open({dream:true});
+  await b.set(['梦境背景与迎光'],'背景流动',false);
+  assert.deepEqual(await state(),[['f3faff','fff0db',0.08],['d1aaff','ffe4fa',0.14]]);
   assert.equal(await evaluate('mesh.geometry.index.count'),84*16);
   await b.until(`scene.background?.isTexture && document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   assert.deepEqual(b.errors,[]);

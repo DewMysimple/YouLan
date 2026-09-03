@@ -131,10 +131,12 @@ export function createEnvironmentManager(scene, requestRender, {
         filename: name, kind: 'ready',
         status: panoramic ? '加载完成' : '加载完成；建议使用 2:1 等距柱状全景图。',
       });
+      return true;
     } catch (error) {
       texture?.dispose();
       if (disposed || ticket !== generation) return;
       Object.assign(state, { status: `加载失败，保留当前环境。${error.message || '图片无法解码。'}`, kind: 'error' });
+      return false;
     } finally {
       if (!disposed && ticket === generation) { abort = null; notify(); }
     }

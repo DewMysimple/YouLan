@@ -85,12 +85,12 @@ try {
   for(const slot of [['内框插槽管理'],['外框插槽管理']])await b.set(slot,'不透明度',0);
   await b.delay(200);
   assert.deepEqual((await b.screenshot('invisible.png',[[720,500],[720,100]])),[[255,255,255,255],[255,255,255,255]],'zero opacity leaves no phantom edge');
-  await b.click(D,'恢复调好的默认效果');await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.click(D,'恢复调好的默认效果');await b.legacyComparison();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   assert.equal(await b.evaluate(`Number(controller(['渲染设置'],'轮廓清晰度').querySelector('input').value)`),.32);
   await view('16,5,2');await b.screenshot('delivery-corner.png');
   await b.click(D,'纯透射对照');
   assert.equal(await b.evaluate(`Number(controller(['渲染设置'],'轮廓清晰度').querySelector('input').value)`),0);
-  await b.click(D,'恢复调好的默认效果');await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.click(D,'恢复调好的默认效果');await b.legacyComparison();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   await b.delay(300);
   const memory=await b.evaluate('JSON.stringify(__renderer.info.memory)');
   for(let i=0;i<12;i++) {await b.set(R,'轮廓清晰度',i%2?.32:0);await b.set(R,'轮廓宽度（像素）',i%2?1:2);await b.delay(30);}

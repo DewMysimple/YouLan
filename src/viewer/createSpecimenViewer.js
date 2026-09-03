@@ -12,6 +12,8 @@ import { createEmbeddedCore } from './embeddedCore.js';
 import { createSoftEdges } from './softEdges.js';
 import { createSelectiveBloom } from './selectiveBloom.js';
 import { bindDepthPresentation, DEPTH_ENVIRONMENT } from './depthPresentation.js';
+import { createDreamAtmosphere, bindAtmospherePanel } from './dreamAtmosphere.js';
+import { createTransparentOrdering } from './transparentOrdering.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 
@@ -21,6 +23,7 @@ const DEFAULT_MATERIAL_PARAMETERS = Object.freeze({
   emissiveIntensity: 0,
   transmission: 1,
   opacity: 1,
+  depthWrite: true,
   metalness: 0,
   roughness: 0,
   ior: 1.5,
@@ -43,6 +46,7 @@ function createTransmissionMaterial(parameters, environmentTexture) {
     emissiveIntensity: parameters.emissiveIntensity,
     transmission: parameters.transmission,
     opacity: parameters.opacity,
+    depthWrite: parameters.depthWrite,
     metalness: parameters.metalness,
     roughness: parameters.roughness,
     ior: parameters.ior,
@@ -98,6 +102,9 @@ function bindMaterialFolder(folder, parameters, material, requestRender, updateE
       material.opacity = value;
       requestRender();
     });
+  folder.add(parameters, 'depthWrite').name('写入深度（遮挡后层）').onChange(value => {
+    material.depthWrite = value; requestRender();
+  });
 
   folder
     .add(parameters, 'metalness', 0, 1, 0.01)
@@ -244,6 +251,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let localEmission = null;
   let embeddedCore = null;
   let softEdges = null;
+  let transparentOrdering = null;
+  let refreshAtmospherePanel = null;
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
@@ -264,26 +273,49 @@ export function createSpecimenViewer(container, { onError } = {}) {
   controls.enableDamping = false;
   const slices = createSliceAccumulation(renderer);
   const bloom = createSelectiveBloom(renderer, slices.render);
+  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const atmosphere = createDreamAtmosphere(scene, camera, slices, { reducedMotion: motionPreference.matches });
+  bloom.setAtmosphere(atmosphere);
 
   const requestRender = () => {
-    if (disposed || renderFrame) return;
+    if (disposed || renderFrame || document.hidden) return;
 
-    renderFrame = window.requestAnimationFrame(() => {
+    renderFrame = window.requestAnimationFrame((timestamp) => {
       renderFrame = 0;
       if (!disposed) {
         embeddedCore?.update();
         softEdges?.update();
-        bloom.render(scene, camera);
+        transparentOrdering?.update(camera);
+        const animated = atmosphere.update(timestamp, !document.hidden);
+        atmosphere.renderWithBackground(() => bloom.render(scene, camera));
+        if (animated) requestRender();
       }
     });
   };
+  const visibilityChange = () => {
+    atmosphere.pauseClock();
+    if (document.hidden && renderFrame) { window.cancelAnimationFrame(renderFrame); renderFrame = 0; }
+    if (!document.hidden) requestRender();
+  };
+  const motionChange = () => {
+    atmosphere.setReducedMotion(motionPreference.matches);
+    gui?.controllersRecursive().forEach(c => c.updateDisplay());
+    requestRender();
+  };
+  document.addEventListener('visibilitychange', visibilityChange);
+  motionPreference.addEventListener('change', motionChange);
 
   controls.addEventListener('change', requestRender);
   const environment = createEnvironmentManager(scene, requestRender, {
     maxTextureSize: renderer.capabilities.maxTextureSize,
   });
   gui = new GUI({ title: '材质参数', width: 300 });
-  disposeEnvironmentPanel = bindEnvironmentPanel(gui, environment);
+  disposeEnvironmentPanel = bindEnvironmentPanel(gui, environment, () => {
+    atmosphere.parameters.background = 'HDRI / 纯白';
+    gui.controllersRecursive().forEach(c => c.updateDisplay());
+    refreshAtmospherePanel?.();
+    requestRender();
+  });
   Object.assign(environment.parameters, DEPTH_ENVIRONMENT);
   environment.apply();
   void environment.loadBuiltin();
@@ -343,6 +375,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     slices.setCore(embeddedCore);
     softEdges = createSoftEdges(specimenMesh, embeddedCore, renderer);
     bloom.attach(specimenMesh);
+    atmosphere.attach(specimenMesh);
+    transparentOrdering = createTransparentOrdering(specimenMesh);
 
     environment.setMaterials([
       { material: outerMaterial, parameters: outerParameters },
@@ -406,8 +440,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
     });
     bindDepthPresentation(gui, { camera, controls, array: disposeArrayPanel,
       slots: [{ material: outerMaterial, parameters: outerParameters }, { material: innerMaterial, parameters: innerParameters }],
-      slices, bloom, embeddedCore, softEdges, emission: localEmission, environment, renderer, renderParameters, requestRender });
-    gui.folders.filter(folder => folder._title !== '深邃效果').forEach(folder => folder.close());
+      slices, bloom, embeddedCore, softEdges, atmosphere, emission: localEmission, environment, renderer, renderParameters, requestRender });
+    refreshAtmospherePanel = bindAtmospherePanel(gui, atmosphere, requestRender);
+    gui.folders.filter(folder => folder._title !== '梦境背景与迎光').forEach(folder => folder.close());
     requestRender();
   };
 
@@ -430,11 +465,15 @@ export function createSpecimenViewer(container, { onError } = {}) {
 
     if (renderFrame) window.cancelAnimationFrame(renderFrame);
     resizeObserver.disconnect();
+    document.removeEventListener('visibilitychange', visibilityChange);
+    motionPreference.removeEventListener('change', motionChange);
     controls.removeEventListener('change', requestRender);
     controls.dispose();
     disposeArrayPanel?.();
     disposeEnvironmentPanel?.();
     bloom.dispose();
+    transparentOrdering?.dispose();
+    atmosphere.dispose();
     softEdges?.dispose();
     embeddedCore?.dispose();
     slices.dispose();

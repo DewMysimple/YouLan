@@ -6,7 +6,7 @@ import { EDGE_DEFAULTS } from './softEdges.js';
 
 export const DEPTH_DEFAULTS = Object.freeze({ count: 16, spacing: 1.7, fov: 45 });
 export const DEPTH_ENVIRONMENT = Object.freeze({ intensity: 0.7, brightness: 2.2, blur: 0.06, rotation: 130, showBackground: true });
-export const PHYSICAL_BASELINE = Object.freeze({ opacity: 1, transmission: 1, metalness: 0, roughness: 0.035, ior: 1.45, thickness: 0.42 });
+export const PHYSICAL_BASELINE = Object.freeze({ opacity: 1, depthWrite: true, transmission: 1, metalness: 0, roughness: 0.05, ior: 1.35, thickness: 0.2 });
 
 // Perspective alone is not a depth effect: front framing combines FOV with
 // camera distance. All ordinary material/array edits keep the user's camera.
@@ -28,7 +28,7 @@ export function frameFirstSlice(camera, controls, bounds, fov) {
   controls.update();
 }
 
-export function bindDepthPresentation(gui, { camera, controls, array, slots, slices, bloom, embeddedCore, softEdges, emission, environment, renderer, renderParameters, requestRender }) {
+export function bindDepthPresentation(gui, { camera, controls, array, slots, slices, bloom, embeddedCore, softEdges, atmosphere, emission, environment, renderer, renderParameters, requestRender }) {
   const folder = gui.addFolder('深邃效果');
   const parameters = { ...DEPTH_DEFAULTS };
   const originalColors = slots.map(({ parameters: slot }) => slot.color);
@@ -61,7 +61,9 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
         material.specularColor.set(slot.specularColor);
         slot.envMapIntensity = 1;
         slot.emissive = index === 0 ? '#fff0db' : '#ffe4fa';
-        slot.emissiveIntensity = index === 0 ? 0.8 : 1.8;
+        slot.emissiveIntensity = index === 0 ? 0.08 : 0.14;
+        slot.opacity = material.opacity = index === 0 ? 0.5 : 0.6;
+        slot.depthWrite = material.depthWrite = false;
         material.emissive.set(slot.emissive);
         material.emissiveIntensity = slot.emissiveIntensity;
         emission.parameters[index].localized = true;
@@ -71,6 +73,7 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
       embeddedCore.parameters.enabled = true;
       Object.assign(softEdges.parameters, EDGE_DEFAULTS);
       Object.assign(bloom.parameters, BLOOM_DEFAULTS);
+      atmosphere?.restore();
       Object.assign(parameters, DEPTH_DEFAULTS);
       Object.assign(environment.parameters, DEPTH_ENVIRONMENT);
       environment.apply();
@@ -78,8 +81,8 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
       renderer.transmissionResolutionScale = renderParameters.transmissionResolutionScale = 1;
       setArray(); frame(); refresh();
     },
-    baseline() { physical(); slices.parameters.enabled = false; embeddedCore.parameters.enabled = false; softEdges.parameters.strength = 0; bloom.parameters.enabled = false; refresh(); },
-    layersOnly() { physical(); Object.assign(slices.parameters, SLICE_DEFAULTS); embeddedCore.parameters.enabled = true; bloom.parameters.enabled = false; refresh(); },
+    baseline() { physical(); if (atmosphere) atmosphere.parameters.enabled = false; slices.parameters.enabled = false; embeddedCore.parameters.enabled = false; softEdges.parameters.strength = 0; bloom.parameters.enabled = false; refresh(); },
+    layersOnly() { physical(); if (atmosphere) atmosphere.parameters.enabled = false; Object.assign(slices.parameters, SLICE_DEFAULTS); embeddedCore.parameters.enabled = true; bloom.parameters.enabled = false; refresh(); },
     frame,
   };
   folder.add({ restore() { actions.restore(); void environment.loadBuiltin(); } }, 'restore').name('恢复调好的默认效果');
@@ -96,7 +99,7 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
   note.textContent = bloom.supported
-    ? '默认已调好。纵深控件会替换现有阵列。\n内嵌色体采用闭合投影近似，不模拟内部多次折射；可在渲染设置关闭，纯透射对照不含此修正。光晕只来自局部光纹，天空不参与。对照保留相机、阵列、底色与 HDRI。'
+    ? '默认采用视频柔透：低覆盖透明混合、关闭深度写入，各槽内按深度排序，保留两槽原色。是美术近似，不是完整多介质折射；交叉材质仍非逐面交织。物理对照恢复不透明度 1 和深度写入。纵深控件会替换阵列。局部 Bloom 与尽头迎光分开；对照关闭梦境，保留相机、阵列、底色与 HDRI。'
     : '当前设备不支持浮点光晕，保留透射与局部自发光。内嵌色体采用闭合投影近似，不模拟内部多次折射；可在渲染设置关闭，纯透射对照不含此修正。';
   folder.$children.appendChild(note);
   actions.restore();

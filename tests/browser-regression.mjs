@@ -93,7 +93,7 @@ try {
   assert.equal(await evaluate(`mesh.geometry.index.count`), 84);
   assert.equal(await evaluate(`mesh.material[0] !== mesh.material[1]`), true);
   assert.deepEqual(await evaluate('mesh.material.map(m => m.color.getHexString())'), ['f3faff', 'd1aaff']);
-  assert.deepEqual(await evaluate('mesh.material.map(m => [m.transmission, m.opacity, m.roughness, m.ior, m.thickness])'), [[1,1,0.035,1.45,0.42],[1,1,0.035,1.45,0.42]]);
+  assert.deepEqual(await evaluate('mesh.material.map(m => [m.transmission, m.opacity, m.roughness, m.ior, m.thickness])'), [[1,1,0.05,1.35,0.2],[1,1,0.05,1.35,0.2]]);
   await screenshot('white-default.png');
   await set(['渲染设置'], '曝光', 0.2);
   assert.deepEqual(await evaluate(`(() => { __renderer.render(scene, __camera); const gl = __renderer.getContext(); const pixel = new Uint8Array(4); gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel); return Array.from(pixel); })()`), [255, 255, 255, 255]);

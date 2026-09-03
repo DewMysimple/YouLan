@@ -48,7 +48,15 @@ export async function browserHarness(output) {
   }
   const click = (path, label) => evaluate(`button(${JSON.stringify(path)}, ${JSON.stringify(label)}).click()`);
   const set = (path, label, value) => evaluate(`setControl(${JSON.stringify(path)}, ${JSON.stringify(label)}, ${JSON.stringify(value)})`);
-  async function open({ baseline = false } = {}) {
+  async function legacyComparison() {
+    await set(['梦境背景与迎光'], '启用梦境效果', false);
+    for (const [i,path] of [['外框插槽管理'],['内框插槽管理']].entries()) {
+      await set(path, '不透明度', 1);
+      await set(path, '写入深度（遮挡后层）', true);
+      await set(path, '自发光强度', i === 0 ? .8 : 1.8);
+    }
+  }
+  async function open({ baseline = false, dream = false } = {}) {
     await send('Page.enable'); await send('Runtime.enable');
     await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
     await send('Page.addScriptToEvaluateOnNewDocument', { source: `
@@ -79,11 +87,16 @@ export async function browserHarness(output) {
       window.button = (path, label) => controller(path, label).querySelector('button');
       window.setControl = (path, label, value) => {
         const control = controller(path, label);
+        const select = control.querySelector('select');
+        if (select) { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); return; }
         const input = control.querySelector(typeof value === 'boolean' ? 'input[type=checkbox]' : typeof value === 'string' && value.startsWith('#') ? 'input[type=color]' : 'input[type=number]');
         if (typeof value === 'boolean') { if (input.checked !== value) input.click(); }
         else { input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); }
       };
     `);
+    // Legacy suites isolate the existing material/geometry pipeline; the dream
+    // suite explicitly verifies the new animated startup and its extra objects.
+    if (!dream) await legacyComparison();
     await delay(300);
     if (baseline) {
       // Legacy feature regression in a neutral single-object scene, separate
@@ -105,5 +118,5 @@ export async function browserHarness(output) {
       await delay(200);
     }
   }
-  return { send, evaluate, until, screenshot, click, set, open, delay, errors, close: () => ws.close() };
+  return { send, evaluate, until, screenshot, click, set, open, legacyComparison, delay, errors, close: () => ws.close() };
 }

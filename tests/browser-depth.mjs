@@ -12,6 +12,8 @@ try {
   await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   await b.delay(500);
   const env = ['HDRI 环境设置'], depth = ['深邃效果'];
+  // Isolate legacy transmission/Bloom. New startup is covered in browser-dream.
+  const restoreComparison = async () => { await b.click(depth,'恢复调好的默认效果'); await b.legacyComparison(); };
   const capture = async (name, points = [[200,500],[720,500],[540,500],[480,500]]) => {
     await b.delay(200); return b.screenshot(name, points);
   };
@@ -35,7 +37,7 @@ try {
   assert.ok(layers[1][1] < baseline[1][1] - 10);
   // The linear lighting result with Bloom disabled must match the post pipeline
   // when threshold excludes every light trace. No duplicate tone mapping/emission.
-  await b.click(depth, '恢复调好的默认效果');
+  await restoreComparison();
   await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   await b.set(depth,'光晕阈值',5);
   const highThreshold = await capture('04-no-halo.png');
@@ -64,7 +66,7 @@ try {
   assert.equal(await b.evaluate('(()=>{let n=0;scene.traverse(o=>{if(o.isMesh)n++;});return n;})()'),1);
   assert.equal(await b.evaluate('mesh.geometry.attributes.uv1.count'),4000);
   // White fallback stays truly white even through the Bloom OutputPass.
-  await b.click(depth,'恢复调好的默认效果');
+  await restoreComparison();
   await b.click(env,'清除贴图');
   assert.deepEqual((await capture('07-white-bloom.png',[[10,10]]))[0],[255,255,255,255]);
   await b.set(['内框插槽管理'],'不透明度',0);
@@ -95,7 +97,7 @@ try {
   await capture('10-reverse.png');
   await b.click(['阵列修改器'],'适配全部');
   await capture('11-fit-all.png');
-  await b.click(depth,'恢复调好的默认效果');
+  await restoreComparison();
   await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   await b.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true});
   await b.click(depth,'首层正面取景');

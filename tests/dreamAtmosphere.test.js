@@ -1,0 +1,64 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { createDreamAtmosphere, projectSun } from '../src/viewer/dreamAtmosphere.js';
+import { createTransparentOrdering } from '../src/viewer/transparentOrdering.js';
+
+test('source projection tracks world light and fades off axis, at viewport edge and behind camera', () => {
+  const c = new THREE.PerspectiveCamera(45, 1.44, .1, 2000), p = new THREE.Vector3(0, 0, -40);
+  c.position.set(0,0,14); c.lookAt(p); c.updateMatrixWorld();
+  assert.equal(projectSun(c,p,.8).gate,1);
+  assert.deepEqual(projectSun(c,p,.8).uv.toArray(),[.5,.5]);
+  c.position.set(20,0,14); c.lookAt(p); c.updateMatrixWorld();
+  const oblique=projectSun(c,p,.8).gate; assert.ok(oblique>0&&oblique<1);
+  c.position.set(40,0,-40); c.lookAt(p); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.8).gate,0);
+  c.position.set(0,0,-70); c.lookAt(p); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.8).gate,0);
+  c.position.set(0,0,14); c.lookAt(60,0,0); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.8).gate,0);
+});
+
+test('atmosphere owns separate source, holds material colors, restores background even on failure, and disposes', () => {
+  const scene=new THREE.Scene(), camera=new THREE.PerspectiveCamera(45,1,.1,2000);
+  camera.position.z=14; camera.lookAt(0,0,0);
+  let counts=false;
+  const slices={ requireCounts(v){counts=v;},optics(){return {texture:null};},parameters:{enabled:true,strength:.09,limit:3} };
+  const a=createDreamAtmosphere(scene,camera,slices);
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(9,9,.4),[new THREE.MeshPhysicalMaterial({color:'#f3faff'}),new THREE.MeshPhysicalMaterial({color:'#d1aaff'})]);
+  mesh.position.z=-20;scene.add(mesh);a.attach(mesh);
+  const before=mesh.material.map(m=>m.color.getHexString());
+  a.update(0); a.update(100); assert.ok(a.uniforms.dreamTime.value>0);assert.ok(counts);
+  assert.ok(a.sun.position.z < -20.2);const fixed=a.sun.position.toArray();
+  camera.position.x=40; a.update(200); assert.deepEqual(a.sun.position.toArray(),fixed);
+  a.parameters.animated=false;const time=a.uniforms.dreamTime.value;a.update(1000);assert.equal(a.uniforms.dreamTime.value,time);
+  const white=new THREE.Color('#ffffff');scene.background=white;
+  assert.throws(()=>a.renderWithBackground(()=>{assert.equal(scene.background,null);throw Error('test');}));assert.equal(scene.background,white);
+  a.parameters.background='纯黑对照';a.renderWithBackground(()=>assert.equal(scene.background.getHex(),0));assert.equal(scene.background,white);
+  assert.deepEqual(mesh.material.map(m=>m.color.getHexString()),before);
+  a.setReducedMotion(true);a.restore();assert.equal(a.parameters.animated,false);
+  a.parameters.enabled=false;a.update(2000);assert.equal(a.group.parent,null);assert.equal(counts,false);
+  a.dispose();a.dispose();assert.equal(scene.children.length,1);mesh.geometry.dispose();mesh.material.forEach(m=>m.dispose());
+});
+
+test('solar shader is inserted after precision and before one final output transfer', () => {
+  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();
+  const a=createDreamAtmosphere(scene,camera,{requireCounts(){}}),output=new OutputPass();
+  output.material.fragmentShader=output.material.fragmentShader.replace('gl_FragColor = texture2D( tDiffuse, vUv );','gl_FragColor = texture2D(tDiffuse, vUv);');
+  a.patchOutput(output);const shader=output.material.fragmentShader;
+  assert.ok(shader.indexOf('precision highp float')<shader.indexOf('uniform bool dreamActive'));
+  assert.ok(shader.indexOf('gl_FragColor.rgb += dreamGlare')<shader.indexOf('// tone mapping'));
+  assert.equal((shader.match(/gl_FragColor.rgb \+= dreamGlare/g)||[]).length,1);
+  assert.ok(shader.includes('dreamTransmittance'));a.dispose();output.dispose();
+});
+
+test('alpha sorting preserves all triangles, winding, groups and attributes, and restores canonical indices', () => {
+  const geometry=new THREE.BoxGeometry(2,2,2);geometry.clearGroups();geometry.addGroup(0,18,0);geometry.addGroup(18,18,1);
+  const index=geometry.index.array.slice(),positions=geometry.attributes.position.array.slice(),groups=structuredClone(geometry.groups);
+  const mesh=new THREE.Mesh(geometry,[new THREE.MeshPhysicalMaterial({opacity:.5,depthWrite:false}),new THREE.MeshPhysicalMaterial({opacity:.6,depthWrite:false})]);
+  const sort=createTransparentOrdering(mesh),camera=new THREE.PerspectiveCamera();camera.position.set(10,4,12);camera.lookAt(0,0,0);
+  sort.update(camera);const version=geometry.index.version;sort.update(camera);assert.equal(geometry.index.version,version);
+  assert.deepEqual(geometry.groups,groups);assert.deepEqual(geometry.attributes.position.array,positions);
+  const tris=(data,start)=>Array.from({length:6},(_,i)=>Array.from(data.slice(start+i*3,start+i*3+3)).join(',')).sort();
+  for(const start of [0,18])assert.deepEqual(tris(index,start),tris(geometry.index.array,start));
+  mesh.material.forEach(m=>{m.depthWrite=true;});sort.update(camera);assert.deepEqual(geometry.index.array,index);
+  sort.dispose();sort.dispose();geometry.dispose();mesh.material.forEach(m=>m.dispose());
+});

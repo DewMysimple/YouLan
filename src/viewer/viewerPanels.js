@@ -30,7 +30,7 @@ export function bindSlicePanel(folder, slices, requestRender) {
   refresh();
 }
 
-export function bindEnvironmentPanel(gui, environment) {
+export function bindEnvironmentPanel(gui, environment, onUserBackground = () => {}) {
   const folder = gui.addFolder('HDRI 环境设置');
   const input = document.createElement('input');
   input.type = 'file';
@@ -38,14 +38,18 @@ export function bindEnvironmentPanel(gui, environment) {
   input.hidden = true;
   input.setAttribute('aria-label', '选择 HDRI 全景图片');
   folder.domElement.appendChild(input);
-  input.addEventListener('change', () => {
+  let selection = 0;
+  input.addEventListener('change', async () => {
     const file = input.files?.[0];
-    if (file) void environment.loadFile(file);
     input.value = '';
+    if (file) {
+      const ticket = ++selection;
+      if (await environment.loadFile(file) && ticket === selection) onUserBackground();
+    }
   });
   const actions = {
-    choose: () => input.click(), clear: () => environment.clear(),
-    builtin: () => environment.loadBuiltin(),
+    choose: () => input.click(), clear: () => { selection++; environment.clear(); onUserBackground(); },
+    builtin: async () => { const ticket = ++selection; if (await environment.loadBuiltin() && ticket === selection) onUserBackground(); },
   };
   folder.add(actions, 'choose').name('选择本地贴图');
   folder.add(actions, 'clear').name('清除贴图');
@@ -69,7 +73,7 @@ export function bindEnvironmentPanel(gui, environment) {
     blur.enable(hasImage && parameters.showBackground);
   }
   const unsubscribe = environment.subscribe(refresh);
-  return () => { unsubscribe(); input.remove(); };
+  return () => { selection++; unsubscribe(); input.remove(); };
 }
 
 export function bindArrayPanel(gui, mesh, requestRender, fit) {

@@ -70,6 +70,7 @@ try {
   await b.click(depth,'纯透射对照');
   assert.equal(await b.evaluate(`controller(['渲染设置'],'内嵌色体透射').querySelector('input').checked`),false);
   await b.click(depth,'恢复调好的默认效果');
+  await b.legacyComparison();
   await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   await b.set(depth,'纵深数量',100);
   await b.set(depth,'纵深间距',10);
@@ -89,6 +90,7 @@ try {
   const idle = await b.evaluate('__renderCount'); await b.delay(500);
   assert.equal(await b.evaluate('__renderCount'),idle);
   await b.click(depth,'恢复调好的默认效果');
+  await b.legacyComparison();
   await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   await b.delay(300);
   await b.screenshot('delivery-front.png');
