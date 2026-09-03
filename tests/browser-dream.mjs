@@ -39,6 +39,9 @@ try{
   const moved=await capture('02-background-later.png',[[100,100],[300,800],[1050,700]]);
   assert.ok(moved.some((p,i)=>p.some((n,c)=>Math.abs(n-frozen[i][c])>2)),'procedural background changes without camera movement');
   await b.evaluate('sky.material.uniforms.dreamTime.value=0');await wake();
+  // Temporal fading is covered by browser-infinite-depth; use immediate mode
+  // here so the existing occlusion and visual comparisons stay deterministic.
+  await b.set(dream,'显隐过渡时长（秒）',0);
   const fixed=await b.evaluate('sun.position.toArray()');
   await pose([8,1,17],[0,0,-6]);
   report.oblique=await b.evaluate('({uv:sky.material.uniforms.dreamSunUv.value.toArray(),gate:sky.material.uniforms.dreamGate.value,position:sun.position.toArray()})');

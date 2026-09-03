@@ -12,7 +12,7 @@ const sameOptics=(a,b)=>{assert.ok(Math.abs(a.radius-b.radius)<1e-12);assert.ok(
 const pose=async(position,target)=>{await b.evaluate(`__camera.position.set(...${JSON.stringify(position)});__camera.lookAt(...${JSON.stringify(target)});`);await wake();await settle();};
 try {
   await b.open({dream:true});await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
-  await b.set(A,'背景流动',false);await settle();
+  await b.set(A,'背景流动',false);await b.delay(1200);
   await b.evaluate(`window.sky=scene.getObjectByName('流动混色天空（独立环境）');window.sun=scene.getObjectByName('尽头亮心（独立亮源）');window.initialCamera=__camera.position.toArray();`);
   report.folders=await b.evaluate(`Array.from(document.querySelector('.lil-gui.root > .children').children).filter(e=>e.classList.contains('lil-gui')).map(e=>e.querySelector(':scope > .title').textContent)`);
   assert.deepEqual(report.folders,['深邃效果','梦境背景与迎光','HDRI 环境设置','外框插槽管理','内框插槽管理','渲染设置']);
@@ -20,7 +20,7 @@ try {
   // Every existing non-array control remains reachable, with the same binding.
   const inventory={
     '深邃效果':['纵深数量','纵深间距','首层取景视角（°）','首层正面取景','适配全部','恢复调好的默认效果','纯透射对照','仅颜色层级对照','局部 Bloom 光晕','光晕强度','光晕半径','光晕阈值'],
-    '梦境背景与迎光':['启用梦境效果','背景模式','背景流动','流动速度','混色背景亮度','尽头亮心强度','亮心半径','亮心距末层','迎光放射强度','亮心柔晕','光束扩散范围','紫色层级保护','亮心距离模式'],
+    '梦境背景与迎光':['启用梦境效果','背景模式','背景流动','流动速度','混色背景亮度','尽头亮心强度','亮心半径','亮心距末层','迎光放射强度','亮心柔晕','光束扩散范围','边缘渐隐范围（%）','显隐过渡时长（秒）','紫色层级保护','亮心距离模式'],
     'HDRI 环境设置':['选择本地贴图','清除贴图','使用内置 HDRI','环境强度','显示贴图背景','背景亮度','背景模糊','水平旋转（°）'],
     '渲染设置':['内嵌色体透射','轮廓清晰度','轮廓宽度（像素）','切片颜色累积','累积强度','加深上限','HDRI 分级显色','曝光','透射分辨率比例'],
   };
@@ -43,9 +43,17 @@ try {
   await b.set(A,'光束扩散范围',.3);await settle();assert.equal((await optics()).gate,1);
   await b.set(A,'光束扩散范围',1);await settle();assert.equal((await optics()).gate,1);
   await b.set(A,'光束扩散范围',.8);
-  await pose([0,0,14],[90,0,-40]);const outside75=await optics();assert.equal(outside75.gate,0);await b.screenshot('00-fov75-sun-outside-rays-off.png');
+  await pose([0,0,14],[90,0,-40]);const leaving75=await optics();assert.ok(leaving75.gate>0&&leaving75.gate<1,'fast exit fades instead of popping');
+  await b.screenshot('00-fov75-sun-leaving-rays-fade.png');await b.delay(1200);
+  const outside75=await optics();assert.equal(outside75.gate,0);await b.screenshot('00-fov75-sun-outside-rays-off.png');
+  await pose([0,0,14],[45,0,-40]);const entering75=await optics();assert.ok(entering75.gate>0&&entering75.gate<1,'fast re-entry fades in instead of popping');
+  await b.delay(1200);assert.equal((await optics()).gate,1);
+  await b.set(A,'显隐过渡时长（秒）',0);await pose([0,0,14],[61,0,-40]);
+  const edgeFeather=await optics();assert.ok(edgeFeather.gate>0&&edgeFeather.gate<1,'viewport-edge feather produces a continuous spatial gate');
+  await pose([0,0,14],[45,0,-40]);assert.equal((await optics()).gate,1);
+  await pose([0,0,14],[90,0,-40]);assert.equal((await optics()).gate,0);
   await pose([0,0,-3000],[0,0,0]);assert.equal((await optics()).gate,0);
-  report.sun={infinite,finite,finiteFar,turned,extreme75,outside75,translation:'invariant',visibility:'rays persist until solar disk exits viewport'};
+  report.sun={infinite,finite,finiteFar,turned,extreme75,leaving75,outside75,entering75,edgeFeather,translation:'invariant',visibility:'rays fade smoothly across and after the viewport edge'};
   await b.click(D,'首层正面取景');await settle();
   const materials=await b.evaluate('mesh.material.map(m=>({color:m.color.getHexString(),opacity:m.opacity,emissive:m.emissiveIntensity}))');
   const camera=await b.evaluate('__camera.position.toArray()');

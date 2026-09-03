@@ -4,14 +4,15 @@ import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 export const ATMOSPHERE_DEFAULTS = Object.freeze({
   enabled: true, background: '流动混色', animated: true, speed: 0.18,
   backgroundStrength: 1.9, sunIntensity: 40, sunRadius: 0.6, distance: 12, sunMode: '无限远（太阳）',
-  rays: 0.65, halo: 0.4, spread: 0.8, protection: 0.72,
+  rays: 0.65, halo: 0.4, spread: 0.8, edgeFade: 6, transitionTime: 0.45, protection: 0.72,
 });
 
 // View-dependent art direction, not a volumetric scattering equation. The
 // finite mode projects a world point; infinite mode projects a world direction
-// through a finite camera-relative proxy. Rays stay fully active for every
-// camera pose in which any part of the projected solar disk remains on screen.
-export function projectSun(camera, position, worldRadius = 0, infinite = false) {
+// through a finite camera-relative proxy. The soft gate is based on signed
+// screen-space distance to the nearest viewport edge. It reaches zero only
+// after the solar disk and the configured feather have moved out of view.
+export function projectSun(camera, position, worldRadius = 0, infinite = false, edgeFadePercent = 0) {
   const toward = position.clone().sub(camera.getWorldPosition(new THREE.Vector3()));
   const depth = toward.length();
   if (!depth) return { gate: 0, uv: new THREE.Vector2(0.5, 0.5), depth: 0, radius: 0 };
@@ -24,11 +25,14 @@ export function projectSun(camera, position, worldRadius = 0, infinite = false) 
   const uv = new THREE.Vector2(p.x * 0.5 + 0.5, p.y * 0.5 + 0.5);
   const radius = Math.max(0, worldRadius) / depth /
     (2 * Math.tan(THREE.MathUtils.degToRad(camera.getEffectiveFOV()) / 2));
-  const radiusX = radius / Math.max(camera.aspect, Number.EPSILON);
-  const intersectsViewport = uv.x + radiusX >= 0 && uv.x - radiusX <= 1 &&
-    uv.y + radius >= 0 && uv.y - radius <= 1;
+  const aspect = Math.max(camera.aspect, Number.EPSILON);
+  // Convert horizontal UV distance to vertical-screen units so the feather is
+  // visually isotropic on wide and tall canvases.
+  const signedEdgeDistance = Math.min(uv.x * aspect, (1 - uv.x) * aspect, uv.y, 1 - uv.y);
+  const feather = Math.max(0, edgeFadePercent) / 100;
+  const gate = THREE.MathUtils.smootherstep(signedEdgeDistance, -radius - feather, radius + feather);
   const insideDepth = infinite || (p.z > -1 && p.z < 1);
-  return { gate: inFront && insideDepth && intersectsViewport ? 1 : 0, uv, depth, radius };
+  return { gate: inFront && insideDepth ? gate : 0, uv, depth, radius, signedEdgeDistance };
 }
 
 const vertex = `varying vec2 vUv;
@@ -156,7 +160,8 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
   sun.frustumCulled = false;
   sun.name = '尽头亮心（独立亮源）';
   const group = new THREE.Group(); group.name = '梦境环境与尽头亮源'; group.add(sky, sun); scene.add(group);
-  let source, baseSize = 9.1, disposed = false, previousTime = null;
+  let source, baseSize = 9.1, disposed = false, previousTime = null, previousGateTime = null;
+  let gateTarget = 0, gateSettled = true;
   const bounds = new THREE.Box3(), dimensions = new THREE.Vector3();
   const black = new THREE.Color('#000000');
   const originalSun = new THREE.Color('#fff2d8');
@@ -203,16 +208,39 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
       sunMaterial.color.copy(originalSun).multiplyScalar(parameters.sunIntensity);
     }
     camera.updateMatrixWorld();
-    const projected = projectSun(camera, sun.position, sun.scale.x, infinite);
+    const projected = projectSun(camera, sun.position, sun.scale.x, infinite, parameters.edgeFade);
     uniforms.dreamSunUv.value.copy(projected.uv);
-    uniforms.dreamGate.value = sun.visible ? projected.gate : 0;
+    const targetGate = sun.visible ? projected.gate : 0;
+    let transitionActive = false;
+    // Panel-level disable/intensity changes are explicit commands and remain
+    // immediate; only viewport entry/exit receives the cinematic transition.
+    if (!visible || !sun.visible || parameters.transitionTime <= 0) {
+      uniforms.dreamGate.value = targetGate;
+      previousGateTime = visible ? timestamp : null;
+      gateTarget = targetGate;
+      gateSettled = true;
+    } else {
+      const targetChanged = Math.abs(targetGate - gateTarget) > .000001;
+      const startsAfterIdle = gateSettled && targetChanged;
+      const delta = previousGateTime === null || startsAfterIdle ? 0 :
+        Math.min(Math.max((timestamp - previousGateTime) / 1000, 0), .1);
+      previousGateTime = timestamp;
+      gateTarget = targetGate;
+      // About 95% convergence over the selected duration. Snap the tiny
+      // remainder so a paused scene returns to true on-demand rendering.
+      const lambda = Math.log(20) / Math.max(parameters.transitionTime, .001);
+      uniforms.dreamGate.value = THREE.MathUtils.damp(uniforms.dreamGate.value, targetGate, lambda, delta);
+      gateSettled = Math.abs(uniforms.dreamGate.value - targetGate) < .001;
+      if (gateSettled) uniforms.dreamGate.value = targetGate;
+      else transitionActive = true;
+    }
     uniforms.dreamAspect.value = camera.aspect;
     uniforms.dreamRadius.value = projected.radius;
     uniforms.dreamOptics.value.set(parameters.sunIntensity, parameters.rays, parameters.halo, parameters.spread);
     uniforms.dreamProtection.value = parameters.protection;
     uniforms.dreamActive.value = parameters.enabled;
     slices.requireCounts(parameters.enabled && sun.visible);
-    return animate;
+    return animate || transitionActive;
   }
   function syncCounts() {
     const data = slices.optics();
@@ -246,10 +274,11 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
       output.material.fragmentShader = output.material.fragmentShader.replace('gl_FragColor = texture2D(tDiffuse, vUv);',
         'gl_FragColor = texture2D(tDiffuse, vUv); gl_FragColor.rgb += dreamGlare(vUv);');
     },
-    pauseClock() { previousTime = null; },
+    pauseClock() { previousTime = null; previousGateTime = null; },
     onPanelRefresh(callback) { panelRefresh = callback; },
     setReducedMotion(value) { motionReduced = value; if (value) parameters.animated = false; panelRefresh(); },
-    restore() { Object.assign(parameters, ATMOSPHERE_DEFAULTS, { animated: !motionReduced }); uniforms.dreamTime.value = 0; previousTime = null; panelRefresh(); },
+    restore() { Object.assign(parameters, ATMOSPHERE_DEFAULTS, { animated: !motionReduced }); uniforms.dreamTime.value = 0;
+      previousTime = null; previousGateTime = null; gateTarget = uniforms.dreamGate.value; gateSettled = true; panelRefresh(); },
     dispose() { if (disposed) return; disposed = true; slices.requireCounts(false); group.removeFromParent();
       sky.geometry.dispose(); skyMaterial.dispose(); sun.geometry.dispose(); sunMaterial.dispose();
       solarEmission.dispose(); solarQuad.dispose(); source = null; panelRefresh = () => {}; },
@@ -272,9 +301,11 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   folder.add(p, 'rays', 0, 2, .01).name('迎光放射强度').onChange(requestRender);
   folder.add(p, 'halo', 0, 2, .01).name('亮心柔晕').onChange(requestRender);
   folder.add(p, 'spread', .3, 1, .01).name('光束扩散范围').onChange(requestRender);
+  folder.add(p, 'edgeFade', 0, 25, .5).name('边缘渐隐范围（%）').onChange(requestRender);
+  folder.add(p, 'transitionTime', 0, 2, .05).name('显隐过渡时长（秒）').onChange(requestRender);
   folder.add(p, 'protection', 0, 1, .01).name('紫色层级保护').onChange(requestRender);
   const note = document.createElement('div'); note.className = 'viewer-effect-note';
-  note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。只要太阳圆盘仍与画面相交，光束就保持显示；圆盘完全移出视野后才隐藏。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
+  note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。太阳接近画面边缘时，光束按渐隐范围平滑变化；快速移入移出时再按过渡时长柔和追随，0 秒可恢复即时切换。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
   folder.$children.appendChild(note);
   function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); distance.enable(p.sunMode === '有限距离'); }
   atmosphere.onPanelRefresh(refresh);

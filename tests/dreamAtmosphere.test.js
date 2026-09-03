@@ -5,20 +5,43 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createDreamAtmosphere, projectSun } from '../src/viewer/dreamAtmosphere.js';
 import { createTransparentOrdering } from '../src/viewer/transparentOrdering.js';
 
-test('source projection keeps rays active until the whole solar disk leaves the viewport', () => {
+test('source projection produces a smooth viewport-edge gate and still reaches exact endpoints', () => {
   const c = new THREE.PerspectiveCamera(75, 1.44, .1, 2000), p = new THREE.Vector3(0, 0, -40);
   c.position.set(0,0,14); c.lookAt(p); c.updateMatrixWorld();
-  assert.equal(projectSun(c,p,.6).gate,1);
+  assert.equal(projectSun(c,p,.6,false,6).gate,1);
   assert.deepEqual(projectSun(c,p,.6).uv.toArray(),[.5,.5]);
   c.lookAt(45,0,-40); c.updateMatrixWorld();
-  const oblique=projectSun(c,p,.6); assert.equal(oblique.gate,1); assert.ok(oblique.uv.x<.15);
+  const oblique=projectSun(c,p,.6,false,6); assert.equal(oblique.gate,1); assert.ok(oblique.uv.x<.15);
   const edgePoint = new THREE.Vector3(-1.01, 0, 0).unproject(c);
   edgePoint.sub(c.position).normalize().multiplyScalar(54).add(c.position);
-  assert.equal(projectSun(c,edgePoint,2).gate,1, 'partially visible disk still emits rays');
+  const edge = projectSun(c,edgePoint,2,false,6);
+  assert.ok(edge.gate>0 && edge.gate<1, 'partially visible disk fades without popping');
   const outsidePoint = new THREE.Vector3(-1.2, 0, 0).unproject(c);
   outsidePoint.sub(c.position).normalize().multiplyScalar(54).add(c.position);
-  assert.equal(projectSun(c,outsidePoint,.1).gate,0, 'fully off-screen disk stops rays');
+  assert.equal(projectSun(c,outsidePoint,.1,false,6).gate,0, 'disk beyond the feather stops rays exactly');
   c.position.set(0,0,-70); c.lookAt(0,0,-100); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.6).gate,0);
+});
+
+test('ray visibility damps both directions, reverses continuously, and eventually idles', () => {
+  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,1.44,.1,2000);
+  camera.position.z=14;camera.lookAt(0,0,0);
+  const a=createDreamAtmosphere(scene,camera,{requireCounts(){},optics(){return {texture:null};}});
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(9,9,.4));scene.add(mesh);a.attach(mesh);
+  a.parameters.animated=false;a.parameters.edgeFade=0;a.parameters.transitionTime=.5;
+  assert.equal(a.update(0),true);assert.equal(a.uniforms.dreamGate.value,0);
+  a.update(100);const entering=a.uniforms.dreamGate.value;assert.ok(entering>0&&entering<1);
+  for(let t=200;t<=1300;t+=100)a.update(t);
+  assert.equal(a.uniforms.dreamGate.value,1);
+  camera.lookAt(1,0,14);camera.updateMatrixWorld();
+  assert.equal(a.update(1400),true);assert.equal(a.uniforms.dreamGate.value,1,'first frame after idle does not jump');
+  a.update(1500);const leaving=a.uniforms.dreamGate.value;assert.ok(leaving>0&&leaving<1);
+  camera.lookAt(0,0,-40);camera.updateMatrixWorld();
+  a.update(1600);assert.ok(a.uniforms.dreamGate.value>=leaving,'reversing direction remains continuous');
+  let active=true;for(let t=1700;t<=3000;t+=100)active=a.update(t);
+  assert.equal(a.uniforms.dreamGate.value,1);assert.equal(active,false,'transition stops requesting frames at the endpoint');
+  a.parameters.sunIntensity=0;assert.equal(a.update(3100),false);
+  assert.equal(a.uniforms.dreamGate.value,0,'explicitly disabling the source remains immediate');
+  a.dispose();mesh.geometry.dispose();mesh.material.dispose();
 });
 
 test('atmosphere owns separate source, holds material colors, restores background even on failure, and disposes', () => {
@@ -27,6 +50,7 @@ test('atmosphere owns separate source, holds material colors, restores backgroun
   let counts=false;
   const slices={ requireCounts(v){counts=v;},optics(){return {texture:null};},parameters:{enabled:true,strength:.09,limit:3} };
   const a=createDreamAtmosphere(scene,camera,slices);
+  a.parameters.transitionTime=0;
   a.parameters.sunMode='有限距离';
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(9,9,.4),[new THREE.MeshPhysicalMaterial({color:'#f3faff'}),new THREE.MeshPhysicalMaterial({color:'#d1aaff'})]);
   mesh.position.z=-20;scene.add(mesh);a.attach(mesh);
@@ -48,6 +72,7 @@ test('infinite sun preserves direction and angular size under translation and de
   const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,1.44,.1,2000);
   camera.position.z=14;camera.lookAt(0,0,0);
   const a=createDreamAtmosphere(scene,camera,{requireCounts(){},optics(){return {texture:null};}});
+  a.parameters.transitionTime=0;
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(9,9,.4));scene.add(mesh);a.attach(mesh);a.update(0);
   const radius=a.uniforms.dreamRadius.value, uv=a.uniforms.dreamSunUv.value.toArray();
   for(const p of [[30,12,1000],[-100,5,-4000],[0,0,14]]) {
