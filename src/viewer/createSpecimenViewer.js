@@ -337,6 +337,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     localEmission = createLocalEmission(specimenMesh);
     slices.attach(specimenMesh);
     embeddedCore = createEmbeddedCore(specimenMesh);
+    slices.setCore(embeddedCore);
     bloom.attach(specimenMesh);
 
     environment.setMaterials([

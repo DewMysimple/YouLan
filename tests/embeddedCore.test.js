@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { prepareSpecimenMesh } from '../src/viewer/specimenModel.js';
-import { coreBounds, coreRayLength, createEmbeddedCore, patchCoreShader } from '../src/viewer/embeddedCore.js';
+import { coreBounds, coreRayLength, createEmbeddedCore, patchCoreShader, patchCoreCountShader } from '../src/viewer/embeddedCore.js';
 import { patchSliceShader } from '../src/viewer/sliceAccumulation.js';
 import { buildArrayGeometry } from '../src/viewer/arrayModifier.js';
 
@@ -31,15 +31,44 @@ test('actual insert volume intersects four side directions, not transparent marg
   mesh.geometry.dispose(); mesh.material.forEach(m=>m.dispose());
 });
 
-test('core shader composes after slices, only shades outer sides and guards native backface prepass',()=>{
+test('closed projection composes before slice absorption and guards native backface prepass',()=>{
   const shader={vertexShader:THREE.ShaderLib.physical.vertexShader,fragmentShader:THREE.ShaderLib.physical.fragmentShader,uniforms:{}};
   patchSliceShader(shader,{}); patchCoreShader(shader,{});
   assert.ok(shader.fragmentShader.includes('sliceOuterAbsorption'));
-  assert.ok(shader.fragmentShader.includes('vCoreSide > 0.5'));
-  assert.ok(shader.fragmentShader.includes('refract(-v, normalize(n), 1.0 / material.ior)'));
+  assert.ok(!shader.fragmentShader.includes('vCoreSide'));
+  assert.ok(shader.fragmentShader.includes('vec3 coreRay = -v;'));
+  assert.ok(!shader.fragmentShader.includes('refract(-v, normalize(n), 1.0 / material.ior)'));
+  assert.ok(shader.fragmentShader.indexOf('vec3 coreRay = -v;') < shader.fragmentShader.indexOf('transmitted.rgb *= exp(-opticalDepth)'));
+  assert.ok(shader.fragmentShader.includes('vec3(2.0 - backIsInner)'));
   assert.ok(shader.fragmentShader.includes('vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance'));
   assert.equal(shader.fragmentShader.split('#ifndef FLIP_SIDED').length,3);
   assert.throws(()=>patchCoreShader({vertexShader:'',fragmentShader:'',uniforms:{}},{}),/接口已改变/);
+});
+
+test('coverage uses the same closed projection, reclassifies rather than double-counts',()=>{
+  const uniforms={coreWeight:{value:1}}, shader={uniforms:{}};
+  patchCoreCountShader(shader,uniforms);
+  assert.equal(shader.uniforms.coreWeight,uniforms.coreWeight);
+  assert.ok(shader.vertexShader.includes('vCorePosition = corePosition'));
+  assert.ok(shader.fragmentShader.includes('coreInterval(vCorePosition, ray)'));
+  assert.ok(shader.fragmentShader.includes('inner ? vec4(0.0, 1.0, 0.0, 1.0) : vec4(1.0, 0.0, 0.0, 1.0)'));
+  const beauty={vertexShader:THREE.ShaderLib.physical.vertexShader,fragmentShader:THREE.ShaderLib.physical.fragmentShader,uniforms:{}};
+  patchCoreShader(beauty,uniforms);
+  const intersection=source=>source.slice(source.indexOf('vec2 coreInterval'),source.indexOf('return farT > nearT'));
+  assert.equal(intersection(beauty.fragmentShader),intersection(shader.fragmentShader));
+});
+
+test('grazing rays cannot tint the outer top but do hit the inset top through the front border',async()=>{
+  const mesh=await model(), bounds=coreBounds(mesh.geometry);
+  // The former side-only refracted direction spuriously hit the core from here.
+  const outside=vector(0,bounds.max.y+1,0);
+  assert.equal(coreRayLength(outside,vector(-1,-.1,0).normalize(),bounds),0);
+  assert.ok(coreRayLength(outside,vector(-.04,-1,0).normalize(),bounds)>0);
+  // Straight line through the front border sees the real inner top, closing
+  // the edge without adding a purple stripe on the distant outer top face.
+  const frontBorder=vector(bounds.max.x,bounds.max.y+.15,0);
+  assert.ok(coreRayLength(frontBorder,vector(-.5,-1,0).normalize(),bounds)>0);
+  mesh.geometry.dispose(); mesh.material.forEach(m=>m.dispose());
 });
 
 test('copy-relative core attribute, source data, independent materials and hook cleanup survive arrays',async()=>{

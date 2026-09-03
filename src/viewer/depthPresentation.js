@@ -94,8 +94,8 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
   note.textContent = bloom.supported
-    ? '默认已调好。纵深控件会替换现有阵列。\n侧面内嵌色体采用路径吸收近似，可在渲染设置关闭；纯透射对照不含此修正。光晕只来自局部光纹，天空不参与。对照保留相机、阵列、底色与 HDRI。'
-    : '当前设备不支持浮点光晕，保留透射与局部自发光。侧面内嵌色体采用路径吸收近似，可在渲染设置关闭；纯透射对照不含此修正。';
+    ? '默认已调好。纵深控件会替换现有阵列。\n内嵌色体采用闭合投影近似，不模拟内部多次折射；可在渲染设置关闭，纯透射对照不含此修正。光晕只来自局部光纹，天空不参与。对照保留相机、阵列、底色与 HDRI。'
+    : '当前设备不支持浮点光晕，保留透射与局部自发光。内嵌色体采用闭合投影近似，不模拟内部多次折射；可在渲染设置关闭，纯透射对照不含此修正。';
   folder.$children.appendChild(note);
   actions.restore();
   return actions;

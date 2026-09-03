@@ -49,7 +49,7 @@ try {
   await b.set(inner,'颜色','#ffffff');
   await b.delay(200);
   const neutral = await b.screenshot(null, [[720,500]]);
-  assert.deepEqual(neutral[0],results.right.before[0], 'core reads actual slot color, not a fixed purple');
+  assert.ok(Math.abs(neutral[0][2]-neutral[0][1]) < 15, 'white core has no residual violet tint');
   await b.set(inner,'颜色','#d1aaff');
   await b.set(inner,'透射率',0);
   await b.delay(200);

@@ -202,5 +202,8 @@ export function createSliceAccumulation(renderer) {
     proxy = null;
     countScene = null;
   }
-  return { parameters, state, attach, render, dispose };
+  function setCore(core) {
+    if (countMaterials[0]) core.patchCountMaterial(countMaterials[0]);
+  }
+  return { parameters, state, attach, setCore, render, dispose };
 }
