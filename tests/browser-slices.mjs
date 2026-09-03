@@ -8,8 +8,7 @@ const output = resolve(process.argv[2]);
 const b = await browserHarness(output);
 const { evaluate, set, click, screenshot, delay } = b;
 const renderPath = ['渲染设置'];
-const layerPath = ['阵列修改器','阵列 1'];
-const offsetPath = [...layerPath,'相对偏移'];
+const layerPath = ['深邃效果'];
 try {
   await b.open({ baseline: true });
   await evaluate(`window.forceTestRender = () => { setControl(['渲染设置'], '曝光', 0.99); setControl(['渲染设置'], '曝光', 1); };
@@ -28,13 +27,11 @@ try {
   await set(['渲染设置'], '切片颜色累积', false); await delay(100);
   assert.deepEqual(await screenshot('single-off.png', [[720,500],[710,300],[500,500]]), singleOn);
   await set(['渲染设置'], '切片颜色累积', true);
-  await click(['阵列修改器'], '新增阵列');
-  await set(['阵列修改器','阵列 1','相对偏移'], 'X', 0);
-  await set(['阵列修改器','阵列 1','相对偏移'], 'Z', -3);
+  await set(layerPath, '纵深间距', 1.26);
   // Keep the original camera, so the near frame stays large and far layers shrink.
   const overlap = [];
   for (const count of [1, 2, 5, 10, 30, 100]) {
-    await set(['阵列修改器','阵列 1'], '数量（含原件）', count);
+    await set(layerPath, '纵深数量', count);
     await delay(180);
     const pixels = await screenshot(`white-${count}.png`, [[720,500],[720,220],[500,500]]);
     overlap.push({ count, pixels });
@@ -74,10 +71,10 @@ try {
   assert.ok((await screenshot(null, [[720,500]]))[0][0] > fullStrength[0][0]);
   await set(renderPath, '加深上限', 3);
   // One frame per 100-copy pile even when completely coincident, never 200 faces.
-  await set(offsetPath, 'Z', 0); await delay(150);
+  await b.diagnosticCopies(100,[0,0,0]); await delay(150);
   assert.deepEqual((await evaluate('readCounts(720,500)')).slice(0,2), [0,100]);
   await screenshot('coincident-100.png');
-  await set(offsetPath, 'Z', -3); await delay(100);
+  await b.diagnosticCopies(100,[0,0,-1.26]); await delay(100);
   const depth = 0.42 * 3 * 99;
   await evaluate(`__camera.position.set(0,0, -${depth}-startCamera[2]); __camera.lookAt(0,0,-${depth}); forceTestRender();`);
   await delay(200);
@@ -87,16 +84,14 @@ try {
   await evaluate(' __camera.position.fromArray(startCamera); __camera.lookAt(0,0,0); forceTestRender();');
   await delay(150);
   // A row without screen overlap must not be darkened by the global copy count.
-  await set(layerPath, '数量（含原件）', 5);
-  await set(offsetPath, 'X', 1.2); await set(offsetPath, 'Z', 0);
-  await click(['阵列修改器'], '适配全部'); await delay(150);
+  await b.diagnosticCopies(5,[9.1*1.2,0,0]);
+  await click(layerPath, '适配全部'); await delay(150);
   const rowOn = await screenshot('row-on.png', [[450,500],[720,500],[850,500]]);
   assert.ok(rowOn[1][0] < 250);
   await set(renderPath, '切片颜色累积', false); await delay(100);
   assert.deepEqual(await screenshot('row-off.png', [[450,500],[720,500],[850,500]]), rowOn);
   await set(renderPath, '切片颜色累积', true);
-  await set(offsetPath, 'X', 0); await set(offsetPath, 'Z', -3);
-  await set(layerPath, '数量（含原件）', 100);
+  await set(layerPath, '纵深数量', 100);await b.diagnosticCopies(100,[0,0,-1.26]);
   await evaluate('__camera.position.fromArray(startCamera); __camera.lookAt(0,0,0); forceTestRender();');
   await click(['HDRI 环境设置'], '使用内置 HDRI');
   await b.until(`folder(['HDRI 环境设置']).querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
@@ -112,7 +107,7 @@ try {
   await set(renderPath, 'HDRI 分级显色', 1); await delay(100);
   await screenshot('hdri-100-clarity-max.png');
   await set(renderPath, 'HDRI 分级显色', 0.75);
-  await evaluate(`folder(['阵列修改器']).querySelector(':scope > .title').click(); folder(['HDRI 环境设置']).querySelector(':scope > .title').click(); folder(['渲染设置']).querySelector(':scope > .title').click();`);
+  await evaluate(`folder(['深邃效果']).querySelector(':scope > .title').click(); folder(['HDRI 环境设置']).querySelector(':scope > .title').click(); folder(['渲染设置']).querySelector(':scope > .title').click();`);
   await delay(350);
   await screenshot('hdri-100-delivery.png');
   await set(['渲染设置'], '切片颜色累积', false); await delay(150);
@@ -149,7 +144,7 @@ try {
   assert.deepEqual((await evaluate('readCounts(720,500)')).slice(0,2), [0,100]);
   await set(renderPath, '透射分辨率比例', 1);
   // Oblique view and real OrbitControls movement must refresh coverage.
-  await set(layerPath, '数量（含原件）', 16);
+  await set(layerPath, '纵深数量', 16);
   await evaluate('__camera.position.set(14,10,24); __camera.lookAt(0,0,-6); forceTestRender();');
   await delay(200); await screenshot('hdri-16-oblique.png');
   await b.send('Input.dispatchMouseEvent', { type:'mousePressed',x:700,y:500,button:'left',buttons:1,clickCount:1 });
@@ -175,14 +170,14 @@ try {
   const idle = await evaluate('__renderCount'); await delay(350);
   assert.equal(await evaluate('__renderCount'), idle);
   // High-DPI resize aligns count pixels with the actual drawing buffer.
-  await click(['阵列修改器'], '适配全部'); await delay(150);
+  await click(layerPath, '适配全部'); await delay(150);
   await b.send('Emulation.setDeviceMetricsOverride', { width:390,height:844,deviceScaleFactor:2,mobile:true });
   await delay(250);
   assert.deepEqual(await evaluate('[__countRT.width,__countRT.height]'), [780,1688]);
   await delay(350);
   await screenshot('slices-mobile-panel.png');
   await b.send('Emulation.setDeviceMetricsOverride', { width:1440,height:1000,deviceScaleFactor:1,mobile:false });
-  await click(['阵列修改器'], '重置全部'); await delay(150);
+  await set(layerPath, '纵深数量', 1); await delay(150);
   assert.deepEqual(await evaluate('Array.from(mesh.geometry.attributes.position.array)'), await evaluate('startGeometry'));
   assert.deepEqual(await evaluate('mesh.material.map(m => m.color.getHexString())'), colors);
   assert.deepEqual(await evaluate('mesh.material.map(m => [m.transmission,m.opacity,m.roughness,m.ior,m.thickness,m.envMapIntensity])'), materialParameters);

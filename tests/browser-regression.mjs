@@ -82,11 +82,11 @@ try {
       else { input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); }
     };
     window.envStatus = () => folder(['HDRI 环境设置']).querySelector('.viewer-panel-status').textContent;
-    window.arrayStatus = () => folder(['阵列修改器']).querySelector('.viewer-panel-status').textContent;
+    window.depthStatus = () => folder(['深邃效果']).querySelector('.viewer-panel-status').textContent;
   `);
   await delay(300);
   await click(['深邃效果'], '纯透射对照');
-  await click(['阵列修改器'], '重置全部');
+  await set(['深邃效果'], '纵深数量', 1);
   await click(['HDRI 环境设置'], '清除贴图');
   await delay(200);
   assert.equal(await evaluate(`scene.background.getHexString()`), 'ffffff');
@@ -154,70 +154,31 @@ try {
   await set(['HDRI 环境设置'], '背景亮度', 1);
   await set(['HDRI 环境设置'], '环境强度', 1);
   await set(['外框插槽管理'], '环境贴图强度', 1);
-  // Real GUI: build 2 x 3 using webpage X/Y and verify geometry groups.
+  // One depth control replaces the removed modifier UI.
+  assert.equal(await evaluate("!!folder(['阵列修改器'])"), false);
   const position = await evaluate('__camera.position.toArray()');
-  await click(['阵列修改器'], '新增阵列');
-  await set(['阵列修改器', '阵列 1', '相对偏移'], 'X', 1.1);
-  await click(['阵列修改器'], '新增阵列');
-  await set(['阵列修改器', '阵列 2'], '数量（含原件）', 3);
-  await set(['阵列修改器', '阵列 2', '相对偏移'], 'X', 0);
-  await set(['阵列修改器', '阵列 2', '相对偏移'], 'Y', 1.1);
-  await delay(250);
-  assert.equal(await evaluate('mesh.geometry.index.count'), 504);
-  assert.deepEqual(await evaluate('__camera.position.toArray()'), position);
-  assert.deepEqual(await evaluate('mesh.geometry.groups.map(g => g.count)'), [432, 72]);
-  await click(['阵列修改器'], '适配全部');
+  const geometryBaseline = await evaluate('__renderer.info.memory.geometries');
+  for (const count of [2, 6, 100, 101, 200]) {
+    await set(['深邃效果'], '纵深数量', count); await delay(150);
+    assert.equal(await evaluate('mesh.geometry.index.count'), count * 84);
+    assert.deepEqual(await evaluate('mesh.geometry.groups.map(g=>g.count)'), [count*72,count*12]);
+    assert.deepEqual(await evaluate('__camera.position.toArray()'), position);
+  }
+  await set(['深邃效果'], '纵深数量', 201); await delay(150);
+  assert.equal(await evaluate('mesh.geometry.index.count'), 84*200);
   await set(['外框插槽管理'], '颜色', '#ff0000');
   await set(['内框插槽管理'], '颜色', '#00ff00');
-  await delay(300);
-  await screenshot('array-2x3-slots.png');
-  assert.deepEqual(await evaluate('mesh.material.map(m => m.color.getHexString())'), ['ff0000', '00ff00']);
-  // The red/green image is a diagnostic only. Restore source colors before
-  // producing any non-diagnostic screenshots or testing other interactions.
+  assert.deepEqual(await evaluate('mesh.material.map(m=>m.color.getHexString())'), ['ff0000','00ff00']);
   await set(['外框插槽管理'], '颜色', '#f3faff');
   await set(['内框插槽管理'], '颜色', '#d1aaff');
-  await delay(100);
-  await screenshot('array-2x3-original-colors.png');
-  assert.equal(await evaluate(`(() => { let count = 0; scene.traverse(o => { if (o.isMesh) count++; }); return count; })()`), 1);
-  await set(['阵列修改器', '阵列 2'], '数量（含原件）', 100);
-  await delay(100);
-  await set(['阵列修改器', '阵列 1'], '数量（含原件）', 3);
-  assert.ok((await evaluate('arrayStatus()')).includes('256'));
-  await delay(150); assert.equal(await evaluate('mesh.geometry.index.count'), 84 * 200);
-  await set(['阵列修改器', '阵列 2'], '数量（含原件）', 3);
-  await set(['阵列修改器', '阵列 2'], '启用', false);
-  await delay(100); assert.equal(await evaluate('mesh.geometry.index.count'), 168);
-  await set(['阵列修改器', '阵列 2'], '启用', true);
-  await click(['阵列修改器', '阵列 2'], '上移');
-  await click(['阵列修改器', '阵列 1'], '下移');
-  await click(['阵列修改器', '阵列 2'], '删除此层');
-  await set(['阵列修改器', '阵列 1', '相对偏移'], 'X', 0);
-  assert.ok((await evaluate('arrayStatus()')).includes('完全重叠'));
-  await click(['阵列修改器'], '重置全部');
-  await delay(150);
+  await evaluate(`window.geometryDisposals=0;mesh.geometry.addEventListener('dispose',()=>geometryDisposals++);
+    [3,4,5].forEach(n=>setControl(['深邃效果'],'纵深数量',n));`);
+  await delay(150);assert.equal(await evaluate('geometryDisposals'),1);
+  await click(['深邃效果'], '适配全部'); await screenshot('depth-five.png');
+  await set(['深邃效果'], '纵深数量', 1); await delay(150);
   assert.deepEqual(await evaluate('Array.from(mesh.geometry.attributes.position.array)'), initialGeometry);
-  assert.equal(await evaluate('mesh.geometry.groups.length'), 2);
-  const geometryBaseline = await evaluate('__renderer.info.memory.geometries');
-  await click(['阵列修改器'], '新增阵列');
-  await delay(100);
-  // All three synchronous changes must cause only one geometry replacement.
-  await evaluate(`window.geometryDisposals = 0; mesh.geometry.addEventListener('dispose', () => geometryDisposals++);
-    for (const value of [3,4,5]) setControl(['阵列修改器','阵列 1'], '数量（含原件）', value);`);
-  await delay(100);
-  assert.equal(await evaluate('geometryDisposals'), 1);
-  await set(['阵列修改器', '阵列 1', '相对偏移'], 'X', 0);
-  await set(['阵列修改器', '阵列 1', '相对偏移'], 'Z', 3);
-  await click(['阵列修改器'], '适配全部');
-  await delay(100); await screenshot('array-front-back.png');
-  await click(['阵列修改器'], '重置全部');
-  for (let i = 0; i < 8; i++) await click(['阵列修改器'], '新增阵列');
-  await delay(100);
-  assert.equal(await evaluate('mesh.geometry.index.count'), 84 * 256);
-  await click(['阵列修改器'], '新增阵列');
-  assert.ok((await evaluate('arrayStatus()')).includes('8'));
-  await click(['阵列修改器'], '重置全部'); await delay(150);
   assert.ok(await evaluate('__renderer.info.memory.geometries') <= geometryBaseline);
-  await click(['阵列修改器'], '适配全部');
+  await click(['深邃效果'], '适配全部');
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 600, y: 500, button: 'left', buttons: 1, clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 740, y: 500, button: 'left', buttons: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 740, y: 500, button: 'left', buttons: 0, clickCount: 1 });
@@ -244,7 +205,7 @@ try {
   })()`);
   assert.equal(disposal.before, disposal.after);
   assert.deepEqual(errors, []);
-  const report = { formats, slots: 'independent', array: '2x3, limits, 8 layers/256 copies, coalescing, reorder, delete, reset passed', resources: 'stable GPU texture/geometry counts', whitePixel: [255,255,255,255], idle: 'passed', panel, disposal, errors };
+  const report = { formats, slots: 'independent', depth: '1–200, two slots, unchanged camera, coalescing and restore single passed', resources: 'stable GPU texture/geometry counts', whitePixel: [255,255,255,255], idle: 'passed', panel, disposal, errors };
   await writeFile(join(output, 'report.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } catch (error) {

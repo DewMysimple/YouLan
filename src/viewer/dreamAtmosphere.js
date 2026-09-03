@@ -3,14 +3,15 @@ import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 export const ATMOSPHERE_DEFAULTS = Object.freeze({
   enabled: true, background: '流动混色', animated: true, speed: 0.18,
-  backgroundStrength: 1.9, sunIntensity: 40, sunRadius: 0.6, distance: 12,
+  backgroundStrength: 1.9, sunIntensity: 40, sunRadius: 0.6, distance: 12, sunMode: '无限远（太阳）',
   rays: 0.65, halo: 0.4, spread: 0.8, protection: 0.72,
 });
 
 // View-dependent art direction, not a volumetric scattering equation. The
-// source is fixed beyond the world -Z end of the array, NEVER camera-attached.
-export function projectSun(camera, position, spread) {
-  const toward = position.clone().sub(camera.position);
+// Finite mode projects a world point; infinite mode projects a world direction
+// through a finite camera-relative proxy. Translation never changes that direction.
+export function projectSun(camera, position, spread, infinite = false) {
+  const toward = position.clone().sub(camera.getWorldPosition(new THREE.Vector3()));
   const depth = toward.length();
   if (!depth) return { gate: 0, uv: new THREE.Vector2(0.5, 0.5), depth: 0 };
   toward.divideScalar(depth);
@@ -21,7 +22,7 @@ export function projectSun(camera, position, spread) {
   const edge = 1 - THREE.MathUtils.smoothstep(Math.max(Math.abs(p.x), Math.abs(p.y)), 0.6, 1.05);
   const facing = THREE.MathUtils.smoothstep(looking, Math.cos(THREE.MathUtils.degToRad(32)), 0.997);
   const alignment = THREE.MathUtils.smoothstep(axis, Math.cos(THREE.MathUtils.degToRad(65 * spread)), 0.985);
-  return { gate: p.z > -1 && p.z < 1 ? facing * alignment * edge : 0,
+  return { gate: infinite || (p.z > -1 && p.z < 1) ? facing * alignment * edge : 0,
     uv: new THREE.Vector2(p.x * 0.5 + 0.5, p.y * 0.5 + 0.5), depth };
 }
 
@@ -136,7 +137,17 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), skyMaterial);
   sky.name = '流动混色天空（独立环境）'; sky.frustumCulled = false; sky.renderOrder = -10000;
   const sunMaterial = new THREE.MeshBasicMaterial({ color: '#fff2d8' });
+  const distantSun = { value: true };
+  // Keep finite coordinates and the native unlit color pipeline. At infinity
+  // the disk is drawn at the far depth, behind geometry even beyond its proxy.
+  // Projection still uses camera rotation/FOV: it is NOT a screen-fixed icon.
+  sunMaterial.onBeforeCompile = shader => {
+    shader.uniforms.distantSun = distantSun;
+    shader.vertexShader = 'uniform bool distantSun;\n' + shader.vertexShader.replace('#include <project_vertex>',
+      '#include <project_vertex>\nif (distantSun) gl_Position.z = gl_Position.w * 0.999999;');
+  };
   const sun = new THREE.Mesh(new THREE.CircleGeometry(1, 64), sunMaterial);
+  sun.frustumCulled = false;
   sun.name = '尽头亮心（独立亮源）';
   const group = new THREE.Group(); group.name = '梦境环境与尽头亮源'; group.add(sky, sun); scene.add(group);
   let source, baseSize = 9.1, disposed = false, previousTime = null;
@@ -169,19 +180,28 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
     sky.visible = parameters.enabled && parameters.background === '流动混色';
     skyMaterial.uniforms.brightness.value = parameters.backgroundStrength;
     sun.visible = parameters.enabled && parameters.sunIntensity > 0 && !!source;
+    const infinite = parameters.sunMode === '无限远（太阳）';
+    distantSun.value = infinite;
     if (source) {
-      bounds.setFromObject(source);
-      bounds.getCenter(sun.position);
-      sun.position.z = bounds.min.z - parameters.distance;
-      sun.scale.setScalar(parameters.sunRadius * baseSize / 9.1);
+      if (infinite) {
+        // 50 is a projection reference, not a distance to the last slice.
+        // Radius/distance ratio stays fixed under pan, dolly and depth changes.
+        camera.getWorldPosition(sun.position); sun.position.z -= 50;
+        sun.scale.setScalar(parameters.sunRadius);
+      } else {
+        bounds.setFromObject(source);
+        bounds.getCenter(sun.position);
+        sun.position.z = bounds.min.z - parameters.distance;
+        sun.scale.setScalar(parameters.sunRadius * baseSize / 9.1);
+      }
       sunMaterial.color.copy(originalSun).multiplyScalar(parameters.sunIntensity);
     }
     camera.updateMatrixWorld();
-    const projected = projectSun(camera, sun.position, parameters.spread);
+    const projected = projectSun(camera, sun.position, parameters.spread, infinite);
     uniforms.dreamSunUv.value.copy(projected.uv);
     uniforms.dreamGate.value = sun.visible ? projected.gate : 0;
     uniforms.dreamAspect.value = camera.aspect;
-    uniforms.dreamRadius.value = sun.scale.x / Math.max(projected.depth, .001) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+    uniforms.dreamRadius.value = sun.scale.x / Math.max(projected.depth, .001) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.getEffectiveFOV()) / 2));
     uniforms.dreamOptics.value.set(parameters.sunIntensity, parameters.rays, parameters.halo, 0);
     uniforms.dreamProtection.value = parameters.protection;
     uniforms.dreamActive.value = parameters.enabled;
@@ -237,19 +257,20 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   folder.add(p, 'enabled').name('启用梦境效果').onChange(update);
   folder.add(p, 'background', ['流动混色', 'HDRI / 纯白', '纯黑对照']).name('背景模式').onChange(update);
   const animated = folder.add(p, 'animated').name('背景流动').onChange(update);
-  const speed = folder.add(p, 'speed', 0, .6, .01).name('流动速度').onChange(update);
+  const speed = folder.add(p, 'speed', 0, 2, .01).name('流动速度').onChange(update);
   const brightness = folder.add(p, 'backgroundStrength', .2, 3, .01).name('混色背景亮度').onChange(requestRender);
   folder.add(p, 'sunIntensity', 0, 60, .1).name('尽头亮心强度').onChange(requestRender);
   folder.add(p, 'sunRadius', .1, 3, .01).name('亮心半径').onChange(requestRender);
-  folder.add(p, 'distance', 1, 80, .1).name('亮心距末层').onChange(requestRender);
+  folder.add(p, 'sunMode', ['无限远（太阳）', '有限距离']).name('亮心距离模式').onChange(update);
+  const distance = folder.add(p, 'distance', 1, 80, .1).name('亮心距末层').onChange(requestRender);
   folder.add(p, 'rays', 0, 2, .01).name('迎光放射强度').onChange(requestRender);
   folder.add(p, 'halo', 0, 2, .01).name('亮心柔晕').onChange(requestRender);
   folder.add(p, 'spread', .3, 1, .01).name('迎光角度范围').onChange(requestRender);
   folder.add(p, 'protection', 0, 1, .01).name('紫色层级保护').onChange(requestRender);
   const note = document.createElement('div'); note.className = 'viewer-effect-note';
-  note.textContent = '朝向尽头亮源才有径向光；侧看保留柔透切片。混色背景与 HDRI 照明分开。手动选图成功或清除后切回 HDRI / 纯白，可在此重新选混色。关闭背景流动即暂停，切到后台自动停；黑底不关闭照明。屏幕空间光效不含完整体积散射或多次折射。';
+  note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。朝向亮源才有径向光。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
   folder.$children.appendChild(note);
-  function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); }
+  function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); distance.enable(p.sunMode === '有限距离'); }
   atmosphere.onPanelRefresh(refresh);
   refresh();
   return refresh;

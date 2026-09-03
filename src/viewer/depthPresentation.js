@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createArrayLayer } from './arrayModifier.js';
+import { DEPTH_LIMITS } from './depthStack.js';
 import { SLICE_DEFAULTS } from './sliceAccumulation.js';
 import { BLOOM_DEFAULTS } from './selectiveBloom.js';
 import { EDGE_DEFAULTS } from './softEdges.js';
@@ -28,7 +28,7 @@ export function frameFirstSlice(camera, controls, bounds, fov) {
   controls.update();
 }
 
-export function bindDepthPresentation(gui, { camera, controls, array, slots, slices, bloom, embeddedCore, softEdges, atmosphere, emission, environment, renderer, renderParameters, requestRender }) {
+export function bindDepthPresentation(gui, { camera, controls, stack, fitAll, slots, slices, bloom, embeddedCore, softEdges, atmosphere, emission, environment, renderer, renderParameters, requestRender }) {
   const folder = gui.addFolder('深邃效果');
   const parameters = { ...DEPTH_DEFAULTS };
   const originalColors = slots.map(({ parameters: slot }) => slot.color);
@@ -42,12 +42,12 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
     environment.apply();
   }
   function setArray() {
-    const layer = { ...createArrayLayer(), count: parameters.count, relative: false,
-      constant: true, constantZ: -parameters.spacing };
-    return array.setLayers([layer]);
+    const valid = stack.set(parameters.count, parameters.spacing);
+    if (!valid) { parameters.count = stack.state.count; parameters.spacing = stack.state.spacing; refresh(); }
+    return valid;
   }
   function frame() {
-    frameFirstSlice(camera, controls, array.baseBounds, parameters.fov);
+    frameFirstSlice(camera, controls, stack.baseBounds, parameters.fov);
     requestRender();
   }
   const actions = {
@@ -83,15 +83,25 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
     },
     baseline() { physical(); if (atmosphere) atmosphere.parameters.enabled = false; slices.parameters.enabled = false; embeddedCore.parameters.enabled = false; softEdges.parameters.strength = 0; bloom.parameters.enabled = false; refresh(); },
     layersOnly() { physical(); if (atmosphere) atmosphere.parameters.enabled = false; Object.assign(slices.parameters, SLICE_DEFAULTS); embeddedCore.parameters.enabled = true; bloom.parameters.enabled = false; refresh(); },
-    frame,
+    frame, fitAll,
   };
   folder.add({ restore() { actions.restore(); void environment.loadBuiltin(); } }, 'restore').name('恢复调好的默认效果');
   folder.add(actions, 'baseline').name('纯透射对照');
   folder.add(actions, 'layersOnly').name('仅颜色层级对照');
-  folder.add(parameters, 'count', 1, 100, 1).name('纵深数量').onChange(setArray);
+  folder.add(parameters, 'count', 1, DEPTH_LIMITS.count, 1).name('纵深数量').onChange(setArray);
   folder.add(parameters, 'spacing', 0.01, 10, 0.01).name('纵深间距').onChange(setArray);
   folder.add(parameters, 'fov', 25, 75, 1).name('首层取景视角（°）').onChange(frame);
   folder.add(actions, 'frame').name('首层正面取景');
+  folder.add(actions, 'fitAll').name('适配全部');
+  const status = document.createElement('div');
+  status.className = 'viewer-panel-status'; status.setAttribute('role', 'status');
+  folder.$children.appendChild(status);
+  stack.subscribe(state => {
+    parameters.count = state.count; parameters.spacing = state.spacing;
+    folder.controllers.forEach(c => c.updateDisplay());
+    status.dataset.kind = state.error ? 'error' : 'ready';
+    status.textContent = state.error || `${state.count} / 200 层（含首层） · 沿 Z 轴向后排列`;
+  });
   folder.add(bloom.parameters, 'enabled').name('局部 Bloom 光晕').onChange(requestRender).enable(bloom.supported);
   folder.add(bloom.parameters, 'strength', 0, 2, 0.01).name('光晕强度').onChange(requestRender).enable(bloom.supported);
   folder.add(bloom.parameters, 'radius', 0, 1, 0.01).name('光晕半径').onChange(requestRender).enable(bloom.supported);
@@ -99,7 +109,7 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
   note.textContent = bloom.supported
-    ? '默认采用视频柔透：低覆盖透明混合、关闭深度写入，各槽内按深度排序，保留两槽原色。是美术近似，不是完整多介质折射；交叉材质仍非逐面交织。物理对照恢复不透明度 1 和深度写入。纵深控件会替换阵列。局部 Bloom 与尽头迎光分开；对照关闭梦境，保留相机、阵列、底色与 HDRI。'
+    ? '纵深数量是唯一复制入口，1 表示单件；普通数量和间距调整不移动相机。默认采用低覆盖透明混合与分组内排序，是美术近似，不是完整多介质折射。物理对照恢复不透明度 1 和深度写入。局部 Bloom 与尽头迎光分开；对照保留相机、纵深、底色与 HDRI。'
     : '当前设备不支持浮点光晕，保留透射与局部自发光。内嵌色体采用闭合投影近似，不模拟内部多次折射；可在渲染设置关闭，纯透射对照不含此修正。';
   folder.$children.appendChild(note);
   actions.restore();

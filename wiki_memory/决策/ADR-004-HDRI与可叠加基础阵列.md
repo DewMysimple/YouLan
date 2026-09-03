@@ -1,9 +1,9 @@
 ---
 type: decision
-status: active
+status: superseded
 kind: architecture
 importance: high
-updated: 2026-09-03
+updated: 2026-09-04
 topic: viewer-environment-and-array
 source_logs:
   - "[[日志/2026-09-03-增加HDRI设置与基础阵列]]"
@@ -11,6 +11,8 @@ supersedes: null
 ---
 
 # ADR-004｜HDRI 与可叠加基础阵列
+
+已由 [[决策/ADR-008-统一纵深控制与无限远亮心|ADR-008]] 替代：用户移除阵列修改器入口，改为 1–200 层唯一纵深控制；环境能力继续保留。下文为原始历史规则。
 
 ## 用户确认
 

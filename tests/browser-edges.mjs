@@ -66,7 +66,7 @@ async function compare(name) {
   report.views.push({ name, ...difference });
 }
 try {
-  await b.open(); await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.open(); await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.set(D, '纵深数量', 1);
   for (const [name, position] of Object.entries({front:'0,0,16',side:'16,0,0',highSide:'16,5,.8',corner:'14,8,5',back:'-14,8,-5',bottom:'16,-6,2'})) {
     await view(position); await compare(name);
@@ -85,12 +85,12 @@ try {
   for(const slot of [['内框插槽管理'],['外框插槽管理']])await b.set(slot,'不透明度',0);
   await b.delay(200);
   assert.deepEqual((await b.screenshot('invisible.png',[[720,500],[720,100]])),[[255,255,255,255],[255,255,255,255]],'zero opacity leaves no phantom edge');
-  await b.click(D,'恢复调好的默认效果');await b.legacyComparison();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.click(D,'恢复调好的默认效果');await b.legacyComparison();await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   assert.equal(await b.evaluate(`Number(controller(['渲染设置'],'轮廓清晰度').querySelector('input').value)`),.32);
   await view('16,5,2');await b.screenshot('delivery-corner.png');
   await b.click(D,'纯透射对照');
   assert.equal(await b.evaluate(`Number(controller(['渲染设置'],'轮廓清晰度').querySelector('input').value)`),0);
-  await b.click(D,'恢复调好的默认效果');await b.legacyComparison();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.click(D,'恢复调好的默认效果');await b.legacyComparison();await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.delay(300);
   const memory=await b.evaluate('JSON.stringify(__renderer.info.memory)');
   for(let i=0;i<12;i++) {await b.set(R,'轮廓清晰度',i%2?.32:0);await b.set(R,'轮廓宽度（像素）',i%2?1:2);await b.delay(30);}
@@ -102,7 +102,9 @@ try {
   await b.delay(300);await b.click(D,'首层正面取景');await b.delay(300);await b.screenshot('mobile.png');
   report.mobile=await b.evaluate(`({width:__renderer.domElement.width,height:__renderer.domElement.height,gui:document.querySelector('.lil-gui.root').getBoundingClientRect().width})`);
   assert.equal(report.mobile.width,780); assert.equal(report.mobile.height,1688);
-  await b.evaluate(`folder(['深邃效果']).querySelector(':scope > .title').click();folder(['渲染设置']).querySelector(':scope > .title').click();controller(['渲染设置'],'轮廓宽度（像素）').scrollIntoView({block:'center'});`);
+  await b.evaluate(`folder(['深邃效果']).querySelector(':scope > .title').click();folder(['渲染设置']).querySelector(':scope > .title').click();`);
+  await b.delay(350); // Wait for native lil-gui folder expansion before scrolling.
+  await b.evaluate(`controller(['渲染设置'],'轮廓宽度（像素）').scrollIntoView({block:'center'});`);
   await b.set(R,'轮廓宽度（像素）',1.5);await b.delay(200);await b.screenshot('mobile-controls.png');
   report.mobileControls=await b.evaluate(`['轮廓清晰度','轮廓宽度（像素）'].map(label=>{const r=controller(['渲染设置'],label).getBoundingClientRect();return {label,left:r.left,right:r.right,top:r.top,bottom:r.bottom}})`);
   report.mobileControls.forEach(r=>assert.ok(r.left>=0&&r.right<=390&&r.top>=0&&r.bottom<=844,'mobile edge controls reachable'));

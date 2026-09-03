@@ -4,7 +4,9 @@ import { OrbitControls } from '../../source/threejs-transmission/examples/jsm/co
 import { GUI } from '../../source/threejs-transmission/examples/jsm/libs/lil-gui.module.min.js';
 import { prepareSpecimenMesh } from './specimenModel.js';
 import { createEnvironmentManager } from './environmentManager.js';
-import { bindEnvironmentPanel, bindArrayPanel, bindSlicePanel } from './viewerPanels.js';
+import { bindEnvironmentPanel, bindSlicePanel } from './viewerPanels.js';
+import { createDepthStack } from './depthStack.js';
+import { organizeViewerPanel } from './panelOrganization.js';
 import { fitArray } from './arrayModifier.js';
 import { createSliceAccumulation } from './sliceAccumulation.js';
 import { createLocalEmission } from './localEmission.js';
@@ -247,7 +249,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let gui = null;
   let loadedModel = null;
   let disposeEnvironmentPanel = null;
-  let disposeArrayPanel = null;
+  let depthStack = null;
   let localEmission = null;
   let embeddedCore = null;
   let softEdges = null;
@@ -283,6 +285,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     renderFrame = window.requestAnimationFrame((timestamp) => {
       renderFrame = 0;
       if (!disposed) {
+        depthStack?.flush();
+        depthStack?.updateCameraClip(camera);
         embeddedCore?.update();
         softEdges?.update();
         transparentOrdering?.update(camera);
@@ -309,7 +313,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   const environment = createEnvironmentManager(scene, requestRender, {
     maxTextureSize: renderer.capabilities.maxTextureSize,
   });
-  gui = new GUI({ title: '材质参数', width: 300 });
+  gui = new GUI({ title: '场景参数', width: 310 });
   disposeEnvironmentPanel = bindEnvironmentPanel(gui, environment, () => {
     atmosphere.parameters.background = 'HDRI / 纯白';
     gui.controllersRecursive().forEach(c => c.updateDisplay());
@@ -382,10 +386,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       { material: outerMaterial, parameters: outerParameters },
       { material: innerMaterial, parameters: innerParameters },
     ]);
-    disposeArrayPanel = bindArrayPanel(gui, specimenMesh, requestRender, () => {
-      fitArray(camera, controls, loadedModel);
-      requestRender();
-    });
+    depthStack = createDepthStack(specimenMesh, requestRender);
 
     const outerFolder = gui.addFolder('外框插槽管理');
     bindMaterialFolder(
@@ -438,11 +439,13 @@ export function createSpecimenViewer(container, { onError } = {}) {
       folder.add(localEmission.parameters[slot], 'localized').name('仅局部光纹发光')
         .onChange(() => { localEmission.apply(); requestRender(); });
     });
-    bindDepthPresentation(gui, { camera, controls, array: disposeArrayPanel,
+    bindDepthPresentation(gui, { camera, controls, stack: depthStack,
+      fitAll: () => { depthStack.flush(); fitArray(camera, controls, loadedModel); requestRender(); },
       slots: [{ material: outerMaterial, parameters: outerParameters }, { material: innerMaterial, parameters: innerParameters }],
       slices, bloom, embeddedCore, softEdges, atmosphere, emission: localEmission, environment, renderer, renderParameters, requestRender });
     refreshAtmospherePanel = bindAtmospherePanel(gui, atmosphere, requestRender);
-    gui.folders.filter(folder => folder._title !== '梦境背景与迎光').forEach(folder => folder.close());
+    organizeViewerPanel(gui);
+    gui.folders.filter(folder => folder._title !== '深邃效果').forEach(folder => folder.close());
     requestRender();
   };
 
@@ -469,7 +472,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     motionPreference.removeEventListener('change', motionChange);
     controls.removeEventListener('change', requestRender);
     controls.dispose();
-    disposeArrayPanel?.();
+    depthStack?.dispose();
     disposeEnvironmentPanel?.();
     bloom.dispose();
     transparentOrdering?.dispose();

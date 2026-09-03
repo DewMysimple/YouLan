@@ -11,7 +11,7 @@ const render = ['渲染设置'], depth = ['深邃效果'], inner = ['内框插�
 const results = {};
 try {
   await b.open();
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.set(depth, '纵深数量', 1);
   await b.delay(300);
   // At a perfectly edge-on view the middle must show an insert, not just the
@@ -62,7 +62,7 @@ try {
   assert.deepEqual(results.white[1],[255,255,255,255]);
   assert.ok(results.white[0][2] > results.white[0][1] + 30);
   await b.click(['HDRI 环境设置'],'使用内置 HDRI');
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.set(['HDRI 环境设置'],'显示贴图背景',false);
   await b.delay(200);
   results.hiddenHDRI = await b.screenshot('hidden-hdri-side.png', [[720,500]]);
@@ -71,7 +71,7 @@ try {
   assert.equal(await b.evaluate(`controller(['渲染设置'],'内嵌色体透射').querySelector('input').checked`),false);
   await b.click(depth,'恢复调好的默认效果');
   await b.legacyComparison();
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.set(depth,'纵深数量',100);
   await b.set(depth,'纵深间距',10);
   const arrayFirst = await view('16,0,0','100-side.png');
@@ -91,7 +91,7 @@ try {
   assert.equal(await b.evaluate('__renderCount'),idle);
   await b.click(depth,'恢复调好的默认效果');
   await b.legacyComparison();
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.delay(300);
   await b.screenshot('delivery-front.png');
   await view('16,2,2','delivery-side.png');

@@ -13,7 +13,7 @@ const wake=()=>b.evaluate(`setControl(['渲染设置'],'曝光',1)`);
 const pose=async(position,target)=>{await b.evaluate(`__camera.position.set(...${JSON.stringify(position)});__camera.lookAt(...${JSON.stringify(target)});setControl(['渲染设置'],'曝光',1);`);await b.delay(200);};
 try{
   await b.open({dream:true});
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.evaluate(`window.sky=scene.getObjectByName('流动混色天空（独立环境）');window.sun=scene.getObjectByName('尽头亮心（独立亮源）');window.front=__camera.position.toArray();`);
   report.defaults=await b.evaluate(`({colors:mesh.material.map(m=>m.color.getHexString()),opacity:mesh.material.map(m=>m.opacity),depthWrite:mesh.material.map(m=>m.depthWrite),geometry:mesh.geometry.index.count,source:sun.position.toArray(),animated:controller(['梦境背景与迎光'],'背景流动').querySelector('input').checked})`);
   assert.deepEqual(report.defaults.colors,['f3faff','d1aaff']);assert.deepEqual(report.defaults.opacity,[.5,.6]);
@@ -28,7 +28,7 @@ try{
   const {root}=await b.send('DOM.getDocument');
   const {nodeId}=await b.send('DOM.querySelector',{nodeId:root.nodeId,selector:'input[type=file]'});
   await b.send('DOM.setFileInputFiles',{nodeId,files:[join(output,'damaged.hdr')]});
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载失败')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载失败')`);
   assert.equal(await b.evaluate(`controller(['梦境背景与迎光'],'背景模式').querySelector('select').value`),'流动混色');
   // Reset only the sampled animation phase for deterministic visual comparisons.
   await b.evaluate('sky.material.uniforms.dreamTime.value=0');await wake();
@@ -42,7 +42,7 @@ try{
   const fixed=await b.evaluate('sun.position.toArray()');
   await pose([8,1,17],[0,0,-6]);
   report.oblique=await b.evaluate('({uv:sky.material.uniforms.dreamSunUv.value.toArray(),gate:sky.material.uniforms.dreamGate.value,position:sun.position.toArray()})');
-  assert.notEqual(report.oblique.uv[0],.5);assert.deepEqual(report.oblique.position,fixed);await capture('03-oblique.png');
+  assert.notEqual(report.oblique.uv[0],.5);assert.notDeepEqual(report.oblique.position,fixed);await capture('03-oblique.png');
   await pose([30,8,-8],[0,0,-12]);assert.equal(await b.evaluate('sky.material.uniforms.dreamGate.value'),0);
   const side=await capture('04-side.png',[[100,100],[700,500],[1000,700]]);
   await b.set(dream,'迎光放射强度',0);const sideNoRays=await capture(null,[[100,100],[700,500],[1000,700]]);
@@ -61,14 +61,14 @@ try{
   const opaque=await capture('08-opaque-occlusion.png',[[720,500],[100,300]]);
   await b.set(dream,'尽头亮心强度',0);const opaqueOff=await capture(null,[[720,500],[100,300]]);
   opaque.forEach((p,i)=>p.forEach((n,c)=>assert.ok(Math.abs(n-opaqueOff[i][c])<=1,'occluded sun does not leak')));
-  await b.click(depth,'恢复调好的默认效果');await pause();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
-  // World-space end placement, unchanged source colors and two groups at all counts.
+  await b.click(depth,'恢复调好的默认效果');await pause();await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
+  // Infinite source direction/radius are independent of total depth.
   report.arrays=[];
-  for(const count of [1,2,16,76,100]){
+  for(const count of [1,2,16,76,100,101,200]){
     await b.set(depth,'纵深数量',count);await b.delay(180);
     const state=await b.evaluate(`({indices:mesh.geometry.index.count,groups:mesh.geometry.groups.map(g=>g.count),source:sun.position.toArray(),colors:mesh.material.map(m=>m.color.getHexString()),gate:sky.material.uniforms.dreamGate.value})`);
     assert.equal(state.indices,count*84);assert.deepEqual(state.groups,[count*72,count*12]);
-    assert.deepEqual(state.colors,['f3faff','d1aaff']);assert.ok(state.source[2]<-(count-1)*1.7-12);
+    assert.deepEqual(state.colors,['f3faff','d1aaff']);assert.deepEqual(state.source,fixed);
     report.arrays.push({count,...state});if(count===76||count===100)await capture(`09-array-${count}.png`);
   }
   // The material knobs remain independent; environment switching doesn't reset them.
@@ -81,8 +81,8 @@ try{
   assert.deepEqual(await b.evaluate('mesh.material.map(m=>({color:m.color.getHexString(),emission:m.emissiveIntensity,opacity:m.opacity,depthWrite:m.depthWrite}))'),materialState);
   await b.set(dream,'启用梦境效果',false);
   assert.deepEqual((await capture('11-white-fallback.png',[[10,10]]))[0],[255,255,255,255]);
-  await b.click(['阵列修改器'],'重置全部');await b.delay(200);assert.equal(await b.evaluate('mesh.geometry.index.count'),84);
-  await b.click(depth,'恢复调好的默认效果');await pause();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.set(depth,'纵深数量',1);await b.delay(200);assert.equal(await b.evaluate('mesh.geometry.index.count'),84);
+  await b.click(depth,'恢复调好的默认效果');await pause();await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   assert.equal(await b.evaluate(`controller(['梦境背景与迎光'],'混色背景亮度').querySelector('input').disabled`),false);
   // Bloom bypass equivalence away from the solar halo: one output transform.
   await b.set(dream,'尽头亮心强度',0);await b.set(depth,'局部 Bloom 光晕',false);
@@ -90,7 +90,7 @@ try{
   await b.set(depth,'局部 Bloom 光晕',true);await b.set(depth,'光晕阈值',5);
   const threshold=await capture(null,[[100,100],[800,600],[950,700]]);
   without.forEach((p,i)=>p.forEach((n,c)=>assert.ok(Math.abs(n-threshold[i][c])<=1,'linear output equivalence')));
-  await b.click(depth,'恢复调好的默认效果');await pause();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.click(depth,'恢复调好的默认效果');await pause();await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   const resources=await b.evaluate('({...__renderer.info.memory,programs:__renderer.info.programs.length})');
   for(let i=0;i<5;i++){await b.set(dream,'背景模式','纯黑对照');await b.delay(80);await b.set(dream,'背景模式','流动混色');await b.delay(80);}
   assert.deepEqual(await b.evaluate('({...__renderer.info.memory,programs:__renderer.info.programs.length})'),resources);report.resources=resources;
@@ -121,7 +121,7 @@ try{
   await capture('12-mobile.png');
   assert.ok(await b.evaluate(`(()=>{const r=controller(['梦境背景与迎光'],'紫色层级保护').getBoundingClientRect();return r.top>=0&&r.bottom<=844;})()`));
   await b.set(dream,'紫色层级保护',.8);await b.until('sky.material.uniforms.dreamProtection.value===.8');
-  await b.open({dream:true});await pause();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.open({dream:true});await pause();await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.evaluate(`window.sky=scene.getObjectByName('流动混色天空（独立环境）');sky.material.uniforms.dreamTime.value=0;`);await wake();
   await capture('13-delivery.png');
   assert.deepEqual(await b.evaluate('mesh.material.map(m=>m.color.getHexString())'),['f3faff','d1aaff']);

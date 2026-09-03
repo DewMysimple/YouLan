@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const output=process.argv[2];await mkdir(output,{recursive:true});
 const b=await browserHarness(output);
 try {
-  await b.open({dream:true});await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.open({dream:true});await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.evaluate(`window.__dreamRecording={status:'recording'}; window.__dreamVideoPromise=new Promise(resolve=>{
     const stream=__renderer.domElement.captureStream(24),chunks=[];
     const recorder=new MediaRecorder(stream,{mimeType:'video/webm;codecs=vp8',videoBitsPerSecond:5000000});

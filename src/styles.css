@@ -76,6 +76,24 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+.viewer-panel-section {
+  padding: 9px 8px 4px;
+  color: #bdbdbd;
+  font-size: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.viewer-panel-help > summary {
+  padding: 8px;
+  cursor: pointer;
+  color: #bdbdbd;
+}
+
+.viewer-panel-help > summary:focus-visible {
+  outline: 1px solid #fff;
+  outline-offset: -2px;
+}
+
 .viewer-panel-status,
 .viewer-effect-note {
   padding: 6px 8px;

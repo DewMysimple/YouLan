@@ -12,10 +12,10 @@ async function view(p,target='0,0,0') {
   await b.delay(200);
 }
 try {
-  await b.open();await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.open();await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.click(D,'仅颜色层级对照');
   await b.set(D,'纵深数量',2);
-  await b.set(['阵列修改器','阵列 1','恒定偏移'],'Z',0);
+  await b.diagnosticCopies(2,[0,0,0]);
   // The two deliberately coincident copies are a diagnostic: a ray crossing
   // the closed insert must count exactly two, not zero at a missing side or
   // four from counting a front and an added side twice.
@@ -65,13 +65,13 @@ try {
     report.views.push({name,...coverage});
   }
   // Check actual displayed pixels, not only the diagnostic coverage buffer.
-  await b.set(D,'纵深数量',1);await view(views.highRight);
+  await b.diagnosticCopies(1,[0,0,0]);await view(views.highRight);
   const on=await b.send('Page.captureScreenshot',{format:'png'});
   await b.set(R,'内嵌色体透射',false);await b.delay(200);
   const off=await b.send('Page.captureScreenshot',{format:'png'});
   // Rebuild the outside mask for this camera after the last coverage view.
   await b.set(R,'内嵌色体透射',true);
-  await b.set(D,'纵深数量',2);await b.set(['阵列修改器','阵列 1','恒定偏移'],'Z',0);await b.delay(200);
+  await b.diagnosticCopies(2,[0,0,0]);await b.delay(200);
   await b.evaluate('inspectCoverage()');
   report.outsideBeauty=await b.evaluate(`(async()=>{
     const arrays=[];
@@ -88,7 +88,7 @@ try {
 
   // Neutral lighting removes legitimate HDRI direction differences. Same
   // material and path endpoints must no longer make the side more saturated.
-  await b.click(E,'清除贴图');await b.set(D,'纵深数量',1);
+  await b.click(E,'清除贴图');await b.diagnosticCopies(1,[0,0,0]);
   for(const slot of [['外框插槽管理'],['内框插槽管理']]) {
     await b.set(slot,'折射率（IOR）',1);await b.set(slot,'厚度',0);await b.set(slot,'粗糙度',0);
   }
@@ -103,9 +103,7 @@ try {
     await view(p);
     const series=[];
     for(const count of [1,2,5,16,100]) {
-      await b.set(D,'纵深数量',count);
-      await b.set(['阵列修改器','阵列 1','恒定偏移'],'Z',0);
-      await b.set(['阵列修改器','阵列 1','恒定偏移'],axis,-1.7);
+      await b.diagnosticCopies(count,axis==='Z'?[0,0,-1.7]:[-1.7,0,0]);
       await b.delay(200);
       const pixel=(await b.screenshot(`${direction}-${count}.png`,[[720,500]]))[0];
       if(series.length)assert.ok(pixel[1]<series.at(-1).pixel[1],`${direction}: more overlaps deepen`);
@@ -115,7 +113,7 @@ try {
   }
   report.progressive[0].series.forEach((s,i)=>s.pixel.forEach((n,c)=>assert.ok(Math.abs(n-report.progressive[1].series[i].pixel[c])<=1,'side and front use identical accumulation')));
   // Restore the delivered scene, with no testing color or camera stored.
-  await b.click(D,'恢复调好的默认效果');await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.click(D,'恢复调好的默认效果');await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.screenshot('delivery-front.png');
   await view('16,5,2');await b.screenshot('delivery-corner.png');
   await b.set(D,'纵深数量',100);await b.set(D,'纵深间距',10);

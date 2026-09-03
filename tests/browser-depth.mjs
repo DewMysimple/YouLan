@@ -9,7 +9,7 @@ await mkdir(output, { recursive: true });
 const b = await browserHarness(output);
 try {
   await b.open();
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.delay(500);
   const env = ['HDRI 环境设置'], depth = ['深邃效果'];
   // Isolate legacy transmission/Bloom. New startup is covered in browser-dream.
@@ -17,7 +17,7 @@ try {
   const capture = async (name, points = [[200,500],[720,500],[540,500],[480,500]]) => {
     await b.delay(200); return b.screenshot(name, points);
   };
-  const state = await b.evaluate(`({materials:mesh.material.map(m=>({color:m.color.getHexString(),emission:m.emissiveIntensity,opacity:m.opacity,transmission:m.transmission,map:m.emissiveMap.channel})),indices:mesh.geometry.index.count,environment:document.querySelector('.viewer-panel-status').textContent})`);
+  const state = await b.evaluate(`({materials:mesh.material.map(m=>({color:m.color.getHexString(),emission:m.emissiveIntensity,opacity:m.opacity,transmission:m.transmission,map:m.emissiveMap.channel})),indices:mesh.geometry.index.count,environment:document.querySelector('.viewer-panel-status[data-environment]').textContent})`);
   assert.deepEqual(state.materials.map(m=>m.color),['f3faff','d1aaff']);
   assert.ok(state.materials.every(m=>m.opacity===1 && m.transmission===1 && m.map===1));
   assert.equal(state.indices,84*16);
@@ -38,7 +38,7 @@ try {
   // The linear lighting result with Bloom disabled must match the post pipeline
   // when threshold excludes every light trace. No duplicate tone mapping/emission.
   await restoreComparison();
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.set(depth,'光晕阈值',5);
   const highThreshold = await capture('04-no-halo.png');
   await b.set(depth,'局部 Bloom 光晕',false);
@@ -74,7 +74,7 @@ try {
   assert.deepEqual(invisible[0],[255,255,255,255]);
   await b.set(['内框插槽管理'],'不透明度',1);
   await b.click(env,'使用内置 HDRI');
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   const emissionState = await b.evaluate('mesh.material.map(m=>[m.emissive.getHexString(),m.emissiveIntensity])');
   await b.set(env,'显示贴图背景',false);
   await capture('08-hdri-hidden.png');
@@ -95,10 +95,10 @@ try {
   await capture('09-oblique.png');
   await b.evaluate(`__camera.position.set(0,0,-45);__camera.lookAt(0,0,-25);setControl(['渲染设置'],'曝光',1);`);
   await capture('10-reverse.png');
-  await b.click(['阵列修改器'],'适配全部');
+  await b.click(depth,'适配全部');
   await capture('11-fit-all.png');
   await restoreComparison();
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true});
   await b.click(depth,'首层正面取景');
   await b.delay(200);
@@ -107,7 +107,7 @@ try {
   assert.deepEqual(await b.evaluate('[__countRT.width,__countRT.height]'),[780,1688]);
   assert.ok(await b.evaluate(`(()=>{const r=controller(['深邃效果'],'光晕阈值').getBoundingClientRect();return r.top>=0&&r.bottom<=844;})()`));
   await b.open();
-  await b.until(`document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   const restored = await capture('13-delivery.png');
   assert.deepEqual(restored,initial);
   assert.equal(b.errors.length, 0, JSON.stringify(b.errors));

@@ -102,7 +102,7 @@ export async function browserHarness(output) {
       // Legacy feature regression in a neutral single-object scene, separate
       // from browser-depth's assertions of the new delivered defaults.
       await click(['深邃效果'], '纯透射对照');
-      await click(['阵列修改器'], '重置全部');
+      await set(['深邃效果'], '纵深数量', 1);
       await click(['HDRI 环境设置'], '清除贴图');
       for (const path of [['外框插槽管理'], ['内框插槽管理']]) {
         await set(path, '仅局部光纹发光', false);
@@ -118,5 +118,23 @@ export async function browserHarness(output) {
       await delay(200);
     }
   }
-  return { send, evaluate, until, screenshot, click, set, open, legacyComparison, delay, errors, close: () => ws.close() };
+  // Test-only synthetic geometry for closure/overlap diagnostics that need
+  // coincident or X/Y copies. These are NOT controls or supported UI features.
+  // Requires Vite; actual 1–200 depth interactions have their own GUI tests.
+  async function diagnosticCopies(count, step) {
+    if (!await evaluate('!!window.__diagnosticBase')) {
+      await set(['深邃效果'], '纵深数量', 2); await delay(100);
+      await set(['深邃效果'], '纵深数量', 1); await delay(100);
+      await evaluate('window.__diagnosticBase=mesh.geometry.clone()');
+    }
+    await delay(100); // Let pending real depth changes finish first.
+    await evaluate(`(async()=>{
+      const {buildArrayGeometry}=await import('/src/viewer/arrayModifier.js');
+      const offsets=Array.from({length:${count}},(_,i)=>__camera.position.clone().set(...${JSON.stringify(step)}).multiplyScalar(i));
+      const geometry=buildArrayGeometry(__diagnosticBase,mesh.matrixWorld,offsets);
+      mesh.geometry.dispose();mesh.geometry=geometry;setControl(['渲染设置'],'曝光',1);
+    })()`);
+    await delay(150);
+  }
+  return { send, evaluate, until, screenshot, click, set, open, legacyComparison, diagnosticCopies, delay, errors, close: () => ws.close() };
 }

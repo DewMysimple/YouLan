@@ -23,6 +23,7 @@ test('atmosphere owns separate source, holds material colors, restores backgroun
   let counts=false;
   const slices={ requireCounts(v){counts=v;},optics(){return {texture:null};},parameters:{enabled:true,strength:.09,limit:3} };
   const a=createDreamAtmosphere(scene,camera,slices);
+  a.parameters.sunMode='有限距离';
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(9,9,.4),[new THREE.MeshPhysicalMaterial({color:'#f3faff'}),new THREE.MeshPhysicalMaterial({color:'#d1aaff'})]);
   mesh.position.z=-20;scene.add(mesh);a.attach(mesh);
   const before=mesh.material.map(m=>m.color.getHexString());
@@ -37,6 +38,28 @@ test('atmosphere owns separate source, holds material colors, restores backgroun
   a.setReducedMotion(true);a.restore();assert.equal(a.parameters.animated,false);
   a.parameters.enabled=false;a.update(2000);assert.equal(a.group.parent,null);assert.equal(counts,false);
   a.dispose();a.dispose();assert.equal(scene.children.length,1);mesh.geometry.dispose();mesh.material.forEach(m=>m.dispose());
+});
+
+test('infinite sun preserves direction and angular size under translation and depth changes, including large near plane', () => {
+  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(45,1.44,.1,2000);
+  camera.position.z=14;camera.lookAt(0,0,0);
+  const a=createDreamAtmosphere(scene,camera,{requireCounts(){},optics(){return {texture:null};}});
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(9,9,.4));scene.add(mesh);a.attach(mesh);a.update(0);
+  const radius=a.uniforms.dreamRadius.value, uv=a.uniforms.dreamSunUv.value.toArray();
+  for(const p of [[30,12,1000],[-100,5,-4000],[0,0,14]]) {
+    camera.position.set(...p);camera.near=100;camera.far=10000;camera.updateProjectionMatrix();
+    mesh.scale.z=200;mesh.position.z=-900;a.update(100);
+    assert.deepEqual(a.uniforms.dreamSunUv.value.toArray(),uv);
+    assert.equal(a.uniforms.dreamRadius.value,radius);assert.equal(a.uniforms.dreamGate.value,1);
+    assert.ok(a.sun.position.toArray().every(Number.isFinite));
+  }
+  camera.lookAt(camera.position.clone().add(new THREE.Vector3(1,0,0)));a.update(200);assert.equal(a.uniforms.dreamGate.value,0);
+  camera.lookAt(camera.position.clone().add(new THREE.Vector3(0,0,1)));a.update(300);assert.equal(a.uniforms.dreamGate.value,0);
+  const shader={uniforms:{},vertexShader:'#include <project_vertex>'};a.sun.material.onBeforeCompile(shader);
+  assert.ok(shader.vertexShader.includes('gl_Position.w * 0.999999'));
+  assert.equal(shader.uniforms.distantSun.value,true);
+  a.parameters.sunMode='有限距离';a.update(400);assert.equal(shader.uniforms.distantSun.value,false);
+  a.dispose();mesh.geometry.dispose();mesh.material.dispose();
 });
 
 test('solar shader is inserted after precision and before one final output transfer', () => {

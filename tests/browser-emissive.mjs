@@ -8,7 +8,7 @@ const output = resolve(process.argv[2]);
 const b = await browserHarness(output);
 const { evaluate, set, click, screenshot, delay } = b;
 const outer = ['外框插槽管理'], inner = ['内框插槽管理'];
-const env = ['HDRI 环境设置'], array = ['阵列修改器'];
+const env = ['HDRI 环境设置'], depth = ['深邃效果'];
 const state = () => evaluate('mesh.material.map(m => [m.color.getHexString(),m.emissive.getHexString(),m.emissiveIntensity])');
 const samples = [[720,500],[370,500],[200,500]]; // inner / outer / background
 const capture = async name => { await delay(150); return screenshot(name, samples); };
@@ -22,7 +22,6 @@ try {
     window.frontCamera=__camera.position.toArray();
     window.redraw=()=>{setControl(['渲染设置'],'曝光',0.99);setControl(['渲染设置'],'曝光',1);};
     folder(['HDRI 环境设置']).querySelector(':scope > .title').click();
-    folder(['阵列修改器']).querySelector(':scope > .title').click();
     folder(['外框插槽管理']).querySelector(':scope > .title').click();
     folder(['内框插槽管理']).querySelector(':scope > .title').click();`);
   await delay(350);
@@ -81,10 +80,8 @@ try {
   }
   await evaluate('__camera.position.fromArray(frontCamera);__camera.lookAt(0,0,0);redraw();');
   // All copies still share the same two emissive materials.
-  await click(array,'新增阵列');
-  await set([...array,'阵列 1','相对偏移'],'X',0);
-  await set([...array,'阵列 1','相对偏移'],'Z',-3);
-  await set([...array,'阵列 1'],'数量（含原件）',100);
+  await set(depth,'纵深间距',1.26);
+  await set(depth,'纵深数量',100);
   await capture('emissive-100.png');
   assert.equal(await evaluate('mesh.geometry.index.count'),8400);
   assert.deepEqual(await evaluate('mesh.geometry.groups.map(g=>g.count)'),[7200,1200]);
@@ -92,7 +89,7 @@ try {
   await set(['渲染设置'],'切片颜色累积',false); await capture('emissive-100-no-accumulation.png');
   await set(['渲染设置'],'切片颜色累积',true);
   assert.deepEqual(await state(),litState);
-  await click(array,'重置全部'); await delay(150);
+  await set(depth,'纵深数量',1); await delay(150);
   assert.deepEqual(await evaluate('Array.from(mesh.geometry.attributes.position.array)'),await evaluate('basePositions'));
   await click(env,'清除贴图');
   await set(inner,'自发光强度',0); await set(inner,'自发光颜色','#ffffff');
@@ -117,7 +114,7 @@ try {
   await b.set(['梦境背景与迎光'],'背景流动',false);
   assert.deepEqual(await state(),[['f3faff','fff0db',0.08],['d1aaff','ffe4fa',0.14]]);
   assert.equal(await evaluate('mesh.geometry.index.count'),84*16);
-  await b.until(`scene.background?.isTexture && document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
+  await b.until(`scene.background?.isTexture && document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   assert.deepEqual(b.errors,[]);
   const report={baseline,levels,colored,resources,slots:'independent',environments:'white/HDRI/hidden/clear',array:100,refresh:'defaults restored',errors:b.errors};
   await writeFile(join(output,'emissive-report.json'),JSON.stringify(report,null,2));
