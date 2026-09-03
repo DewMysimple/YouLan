@@ -8,22 +8,27 @@ export const ATMOSPHERE_DEFAULTS = Object.freeze({
 });
 
 // View-dependent art direction, not a volumetric scattering equation. The
-// Finite mode projects a world point; infinite mode projects a world direction
-// through a finite camera-relative proxy. Translation never changes that direction.
-export function projectSun(camera, position, spread, infinite = false) {
+// finite mode projects a world point; infinite mode projects a world direction
+// through a finite camera-relative proxy. Rays stay fully active for every
+// camera pose in which any part of the projected solar disk remains on screen.
+export function projectSun(camera, position, worldRadius = 0, infinite = false) {
   const toward = position.clone().sub(camera.getWorldPosition(new THREE.Vector3()));
   const depth = toward.length();
-  if (!depth) return { gate: 0, uv: new THREE.Vector2(0.5, 0.5), depth: 0 };
+  if (!depth) return { gate: 0, uv: new THREE.Vector2(0.5, 0.5), depth: 0, radius: 0 };
   toward.divideScalar(depth);
-  const looking = camera.getWorldDirection(new THREE.Vector3()).dot(toward);
-  const axis = Math.max(0, -toward.z);
+  const inFront = camera.getWorldDirection(new THREE.Vector3()).dot(toward) > 0;
   const p = position.clone().project(camera);
-  if (![p.x, p.y, p.z].every(Number.isFinite)) return { gate: 0, uv: new THREE.Vector2(.5, .5), depth };
-  const edge = 1 - THREE.MathUtils.smoothstep(Math.max(Math.abs(p.x), Math.abs(p.y)), 0.6, 1.05);
-  const facing = THREE.MathUtils.smoothstep(looking, Math.cos(THREE.MathUtils.degToRad(32)), 0.997);
-  const alignment = THREE.MathUtils.smoothstep(axis, Math.cos(THREE.MathUtils.degToRad(65 * spread)), 0.985);
-  return { gate: infinite || (p.z > -1 && p.z < 1) ? facing * alignment * edge : 0,
-    uv: new THREE.Vector2(p.x * 0.5 + 0.5, p.y * 0.5 + 0.5), depth };
+  if (![p.x, p.y, p.z].every(Number.isFinite)) {
+    return { gate: 0, uv: new THREE.Vector2(.5, .5), depth, radius: 0 };
+  }
+  const uv = new THREE.Vector2(p.x * 0.5 + 0.5, p.y * 0.5 + 0.5);
+  const radius = Math.max(0, worldRadius) / depth /
+    (2 * Math.tan(THREE.MathUtils.degToRad(camera.getEffectiveFOV()) / 2));
+  const radiusX = radius / Math.max(camera.aspect, Number.EPSILON);
+  const intersectsViewport = uv.x + radiusX >= 0 && uv.x - radiusX <= 1 &&
+    uv.y + radius >= 0 && uv.y - radius <= 1;
+  const insideDepth = infinite || (p.z > -1 && p.z < 1);
+  return { gate: inFront && insideDepth && intersectsViewport ? 1 : 0, uv, depth, radius };
 }
 
 const vertex = `varying vec2 vUv;
@@ -105,7 +110,8 @@ vec3 dreamGlare(vec2 uv){
  float bands=.5+.5*sin(angle*6.+.45*sin(angle*3.));
  bands=smoothstep(.18,.82,bands);
  float wisps=.65+.35*softNoise(vec3(d*3.,dreamTime*.013));
- float falloff=exp(-r*1.55)*(1.-exp(-r*34.));
+ // Spread changes the reach of the rays, never whether an on-screen sun emits them.
+ float falloff=exp(-r*1.55*(.8/max(dreamOptics.w,.01)))*(1.-exp(-r*34.));
  float coverage=dreamHasCounts?smoothstep(0.,1.,texture2D(dreamCounts,uv).g):0.;
  float protect=1.-dreamProtection*coverage;
  vec3 rays=mix(vec3(.82,.64,1.),vec3(1.,.9,.65),bands)*bands*wisps*falloff*dreamOptics.y*protect*.4;
@@ -197,12 +203,12 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
       sunMaterial.color.copy(originalSun).multiplyScalar(parameters.sunIntensity);
     }
     camera.updateMatrixWorld();
-    const projected = projectSun(camera, sun.position, parameters.spread, infinite);
+    const projected = projectSun(camera, sun.position, sun.scale.x, infinite);
     uniforms.dreamSunUv.value.copy(projected.uv);
     uniforms.dreamGate.value = sun.visible ? projected.gate : 0;
     uniforms.dreamAspect.value = camera.aspect;
-    uniforms.dreamRadius.value = sun.scale.x / Math.max(projected.depth, .001) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.getEffectiveFOV()) / 2));
-    uniforms.dreamOptics.value.set(parameters.sunIntensity, parameters.rays, parameters.halo, 0);
+    uniforms.dreamRadius.value = projected.radius;
+    uniforms.dreamOptics.value.set(parameters.sunIntensity, parameters.rays, parameters.halo, parameters.spread);
     uniforms.dreamProtection.value = parameters.protection;
     uniforms.dreamActive.value = parameters.enabled;
     slices.requireCounts(parameters.enabled && sun.visible);
@@ -227,7 +233,7 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
   }
   return { parameters, uniforms, sun, group, update, syncCounts, renderWithBackground,
     get effectActive() { return parameters.enabled; },
-    get sunBloomActive() { return parameters.enabled && parameters.sunIntensity > 0 && parameters.halo > 0; },
+    get sunBloomActive() { return parameters.enabled && parameters.sunIntensity > 0 && parameters.halo > 0 && uniforms.dreamGate.value > 0; },
     renderEmission(renderer) { if (parameters.enabled && parameters.halo > 0 && uniforms.dreamGate.value > 0) solarQuad.render(renderer); },
     attach(mesh) { source = mesh; bounds.setFromObject(mesh).getSize(dimensions); baseSize = Math.max(dimensions.x, dimensions.y); },
     patchOutput(output) {
@@ -265,10 +271,10 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   const distance = folder.add(p, 'distance', 1, 80, .1).name('亮心距末层').onChange(requestRender);
   folder.add(p, 'rays', 0, 2, .01).name('迎光放射强度').onChange(requestRender);
   folder.add(p, 'halo', 0, 2, .01).name('亮心柔晕').onChange(requestRender);
-  folder.add(p, 'spread', .3, 1, .01).name('迎光角度范围').onChange(requestRender);
+  folder.add(p, 'spread', .3, 1, .01).name('光束扩散范围').onChange(requestRender);
   folder.add(p, 'protection', 0, 1, .01).name('紫色层级保护').onChange(requestRender);
   const note = document.createElement('div'); note.className = 'viewer-effect-note';
-  note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。朝向亮源才有径向光。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
+  note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。只要太阳圆盘仍与画面相交，光束就保持显示；圆盘完全移出视野后才隐藏。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
   folder.$children.appendChild(note);
   function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); distance.enable(p.sunMode === '有限距离'); }
   atmosphere.onPanelRefresh(refresh);

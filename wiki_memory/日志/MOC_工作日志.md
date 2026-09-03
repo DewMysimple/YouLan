@@ -16,6 +16,7 @@ supersedes: null
 | 时间 | 类型 | 目标 | 状态 | 主题 | 日志 |
 | --- | --- | --- | --- | --- | --- |
 | 2026-09-04 | feature | - | archived | infinite-sun-depth-panel | [[日志/2026-09-04-统一纵深面板并增加无限远太阳.md|统一纵深面板并增加无限远太阳]] |
+| 2026-09-04 | bug | - | archived | sun-viewport-ray-visibility | [[日志/2026-09-04-修正太阳出画后才隐藏光束.md|修正太阳出画后才隐藏光束]] |
 | 2026-09-04 | feature | - | archived | dream-atmosphere-sun-video | [[日志/2026-09-03-分析双视频并实现尽头迎光与动态混色.md|分析双视频并实现尽头迎光与动态混色]] |
 | 2026-09-03 | maintenance | 将仓库内工程记忆目录统一命名为 `wiki_memory`。 | archived | wiki-memory-directory-name | [[日志/2026-09-03-重命名工程记忆为wiki_memory.md|2026-09-03｜重命名工程记忆为 wiki_memory]] |
 | 2026-09-03 | maintenance | 严格保留外部模板中的 `wiki_memory/AGENTS.md` 和 `wiki_memory/llm-wiki.md`。 | archived | wiki-memory-template-completeness | [[日志/2026-09-03-补齐wiki_memory模板文件.md|2026-09-03｜补齐 wiki_memory 模板文件]] |

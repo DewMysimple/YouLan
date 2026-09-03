@@ -5,16 +5,20 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createDreamAtmosphere, projectSun } from '../src/viewer/dreamAtmosphere.js';
 import { createTransparentOrdering } from '../src/viewer/transparentOrdering.js';
 
-test('source projection tracks world light and fades off axis, at viewport edge and behind camera', () => {
-  const c = new THREE.PerspectiveCamera(45, 1.44, .1, 2000), p = new THREE.Vector3(0, 0, -40);
+test('source projection keeps rays active until the whole solar disk leaves the viewport', () => {
+  const c = new THREE.PerspectiveCamera(75, 1.44, .1, 2000), p = new THREE.Vector3(0, 0, -40);
   c.position.set(0,0,14); c.lookAt(p); c.updateMatrixWorld();
-  assert.equal(projectSun(c,p,.8).gate,1);
-  assert.deepEqual(projectSun(c,p,.8).uv.toArray(),[.5,.5]);
-  c.position.set(20,0,14); c.lookAt(p); c.updateMatrixWorld();
-  const oblique=projectSun(c,p,.8).gate; assert.ok(oblique>0&&oblique<1);
-  c.position.set(40,0,-40); c.lookAt(p); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.8).gate,0);
-  c.position.set(0,0,-70); c.lookAt(p); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.8).gate,0);
-  c.position.set(0,0,14); c.lookAt(60,0,0); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.8).gate,0);
+  assert.equal(projectSun(c,p,.6).gate,1);
+  assert.deepEqual(projectSun(c,p,.6).uv.toArray(),[.5,.5]);
+  c.lookAt(45,0,-40); c.updateMatrixWorld();
+  const oblique=projectSun(c,p,.6); assert.equal(oblique.gate,1); assert.ok(oblique.uv.x<.15);
+  const edgePoint = new THREE.Vector3(-1.01, 0, 0).unproject(c);
+  edgePoint.sub(c.position).normalize().multiplyScalar(54).add(c.position);
+  assert.equal(projectSun(c,edgePoint,2).gate,1, 'partially visible disk still emits rays');
+  const outsidePoint = new THREE.Vector3(-1.2, 0, 0).unproject(c);
+  outsidePoint.sub(c.position).normalize().multiplyScalar(54).add(c.position);
+  assert.equal(projectSun(c,outsidePoint,.1).gate,0, 'fully off-screen disk stops rays');
+  c.position.set(0,0,-70); c.lookAt(0,0,-100); c.updateMatrixWorld(); assert.equal(projectSun(c,p,.6).gate,0);
 });
 
 test('atmosphere owns separate source, holds material colors, restores background even on failure, and disposes', () => {

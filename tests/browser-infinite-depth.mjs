@@ -20,7 +20,7 @@ try {
   // Every existing non-array control remains reachable, with the same binding.
   const inventory={
     '深邃效果':['纵深数量','纵深间距','首层取景视角（°）','首层正面取景','适配全部','恢复调好的默认效果','纯透射对照','仅颜色层级对照','局部 Bloom 光晕','光晕强度','光晕半径','光晕阈值'],
-    '梦境背景与迎光':['启用梦境效果','背景模式','背景流动','流动速度','混色背景亮度','尽头亮心强度','亮心半径','亮心距末层','迎光放射强度','亮心柔晕','迎光角度范围','紫色层级保护','亮心距离模式'],
+    '梦境背景与迎光':['启用梦境效果','背景模式','背景流动','流动速度','混色背景亮度','尽头亮心强度','亮心半径','亮心距末层','迎光放射强度','亮心柔晕','光束扩散范围','紫色层级保护','亮心距离模式'],
     'HDRI 环境设置':['选择本地贴图','清除贴图','使用内置 HDRI','环境强度','显示贴图背景','背景亮度','背景模糊','水平旋转（°）'],
     '渲染设置':['内嵌色体透射','轮廓清晰度','轮廓宽度（像素）','切片颜色累积','累积强度','加深上限','HDRI 分级显色','曝光','透射分辨率比例'],
   };
@@ -38,9 +38,14 @@ try {
     await pose(position,[position[0],position[1],position[2]-1]);sameOptics(await optics(),infinite);
   }
   await pose([0,0,14],[10,0,-40]);const turned=await optics();assert.notEqual(turned.uv[0],.5);
-  await pose([30,0,0],[0,0,0]);assert.equal((await optics()).gate,0);
+  await b.evaluate(`__camera.fov=75;__camera.updateProjectionMatrix();`);
+  await pose([0,0,14],[45,0,-40]);const extreme75=await optics();assert.equal(extreme75.gate,1);assert.ok(extreme75.uv[0]<.15);await b.screenshot('00-fov75-sun-visible-rays-on.png');
+  await b.set(A,'光束扩散范围',.3);await settle();assert.equal((await optics()).gate,1);
+  await b.set(A,'光束扩散范围',1);await settle();assert.equal((await optics()).gate,1);
+  await b.set(A,'光束扩散范围',.8);
+  await pose([0,0,14],[90,0,-40]);const outside75=await optics();assert.equal(outside75.gate,0);await b.screenshot('00-fov75-sun-outside-rays-off.png');
   await pose([0,0,-3000],[0,0,0]);assert.equal((await optics()).gate,0);
-  report.sun={infinite,finite,finiteFar,turned,translation:'invariant',sideAndBack:'zero glare'};
+  report.sun={infinite,finite,finiteFar,turned,extreme75,outside75,translation:'invariant',visibility:'rays persist until solar disk exits viewport'};
   await b.click(D,'首层正面取景');await settle();
   const materials=await b.evaluate('mesh.material.map(m=>({color:m.color.getHexString(),opacity:m.opacity,emissive:m.emissiveIntensity}))');
   const camera=await b.evaluate('__camera.position.toArray()');
@@ -55,6 +60,10 @@ try {
   await b.set(D,'纵深间距',10);await settle();
   report.far=await b.evaluate(`({far:__camera.far,endDepth:__camera.position.z-mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld).min.z})`);
   assert.ok(report.far.far>2004,'last layer not clipped at maximum span');
+  await b.evaluate(`__camera.fov=75;__camera.updateProjectionMatrix();`);await pose([0,0,14],[45,0,-40]);
+  report.maxDepthExtreme=await optics();assert.equal(report.maxDepthExtreme.gate,1,'200 layers and spacing 10 cannot suppress visible-sun rays');
+  await pose([0,0,14],[90,0,-40]);assert.equal((await optics()).gate,0,'same max-depth scene suppresses rays only after the sun exits');
+  await b.click(D,'首层正面取景');await settle();
   report.coverage=await b.evaluate(`(()=>{const p=new Uint16Array(4);__renderer.readRenderTargetPixels(__countRT,720,499,1,1,p);const h=n=>{const e=(n>>10)&31,m=n&1023;return e===0?m*2**-24:(1+m/1024)*2**(e-15)};return Array.from(p,h);})()`);
   assert.equal(report.coverage[1],200,'all 200 inner slices counted through center');
   await b.screenshot('01-depth-200-front.png');

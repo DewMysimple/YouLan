@@ -46,7 +46,7 @@ try{
   await pose([30,8,-8],[0,0,-12]);assert.equal(await b.evaluate('sky.material.uniforms.dreamGate.value'),0);
   const side=await capture('04-side.png',[[100,100],[700,500],[1000,700]]);
   await b.set(dream,'迎光放射强度',0);const sideNoRays=await capture(null,[[100,100],[700,500],[1000,700]]);
-  assert.deepEqual(side,sideNoRays,'no sun-facing rays from side');
+  assert.deepEqual(side,sideNoRays,'rays are absent after the sun leaves this side-view viewport');
   await b.set(dream,'迎光放射强度',.65);
   await pose([0,0,-60],[0,0,-20]);assert.equal(await b.evaluate('sky.material.uniforms.dreamGate.value'),0);await capture('05-back.png');
   await b.click(depth,'首层正面取景');await b.set(dream,'背景模式','纯黑对照');
