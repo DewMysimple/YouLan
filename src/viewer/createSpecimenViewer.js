@@ -12,6 +12,8 @@ const MODEL_URL = '/models/specimen-frame.glb';
 
 const DEFAULT_MATERIAL_PARAMETERS = Object.freeze({
   color: '#ffffff',
+  emissive: '#ffffff',
+  emissiveIntensity: 0,
   transmission: 1,
   opacity: 1,
   metalness: 0,
@@ -32,6 +34,8 @@ function createMaterialParameters(sourceMaterial) {
 function createTransmissionMaterial(parameters, environmentTexture) {
   return new THREE.MeshPhysicalMaterial({
     color: parameters.color,
+    emissive: parameters.emissive,
+    emissiveIntensity: parameters.emissiveIntensity,
     transmission: parameters.transmission,
     opacity: parameters.opacity,
     metalness: parameters.metalness,
@@ -53,6 +57,24 @@ function bindMaterialFolder(folder, parameters, material, requestRender, updateE
     .name('颜色')
     .onChange((value) => {
       material.color.set(value);
+      requestRender();
+    });
+
+  // Native MeshPhysicalMaterial inherits these from MeshStandardMaterial:
+  // https://threejs.org/docs/pages/MeshStandardMaterial.html#emissive
+  folder
+    .addColor(parameters, 'emissive')
+    .name('自发光颜色')
+    .onChange((value) => {
+      material.emissive.set(value);
+      requestRender();
+    });
+
+  folder
+    .add(parameters, 'emissiveIntensity', 0, 10, 0.01)
+    .name('自发光强度')
+    .onChange((value) => {
+      material.emissiveIntensity = value;
       requestRender();
     });
 

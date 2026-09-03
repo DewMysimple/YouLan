@@ -4,7 +4,8 @@ import sys
 import bpy
 
 
-TARGET_OBJECT = "SPECIMEN_FRAME_MATERIAL_SLOTS"
+TARGET_OBJECT = "SPECIMEN_OUTER_FRAME"
+EXPORT_OBJECT = "SPECIMEN_FRAME_MATERIAL_SLOTS"
 MATERIAL_SLOTS = (
     "MAT_OuterFrame_TranslucentWhite",
     "MAT_InnerPanel_TransparentLavender",
@@ -42,6 +43,11 @@ def main():
 
     bpy.context.view_layer.objects.active = target
 
+    # Normalize only this in-memory export session, never save the .blend.
+    if bpy.data.objects.get(EXPORT_OBJECT) not in (None, target):
+        raise RuntimeError(f"导出名称已被其他对象占用：{EXPORT_OBJECT}")
+    target.name = EXPORT_OBJECT
+
     output_path = output_path_from_arguments()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -64,6 +70,7 @@ def main():
 
     print(f"SPECIMEN_EXPORT_OK={output_path}")
     print(f"SPECIMEN_EXPORT_OBJECT={TARGET_OBJECT}")
+    print(f"SPECIMEN_EXPORT_RUNTIME_OBJECT={EXPORT_OBJECT}")
     print(f"SPECIMEN_EXPORT_MATERIAL_SLOTS={','.join(MATERIAL_SLOTS)}")
 
 

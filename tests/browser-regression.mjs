@@ -85,9 +85,9 @@ try {
   `);
   await delay(300);
   assert.equal(await evaluate(`scene.background.getHexString()`), 'ffffff');
-  assert.equal(await evaluate(`mesh.geometry.index.count`), 84);
+  assert.equal(await evaluate(`mesh.geometry.index.count`), 108);
   assert.equal(await evaluate(`mesh.material[0] !== mesh.material[1]`), true);
-  assert.deepEqual(await evaluate('mesh.material.map(m => m.color.getHexString())'), ['f3faff', 'd1bfff']);
+  assert.deepEqual(await evaluate('mesh.material.map(m => m.color.getHexString())'), ['f3faff', 'd1aaff']);
   assert.deepEqual(await evaluate('mesh.material.map(m => [m.transmission, m.opacity, m.roughness, m.ior, m.thickness])'), [[1,1,0,1.5,0.01],[1,1,0,1.5,0.01]]);
   await screenshot('white-default.png');
   await set(['渲染设置'], '曝光', 0.2);
@@ -158,9 +158,9 @@ try {
   await set(['阵列修改器', '阵列 2', '相对偏移'], 'X', 0);
   await set(['阵列修改器', '阵列 2', '相对偏移'], 'Y', 1.1);
   await delay(250);
-  assert.equal(await evaluate('mesh.geometry.index.count'), 504);
+  assert.equal(await evaluate('mesh.geometry.index.count'), 648);
   assert.deepEqual(await evaluate('__camera.position.toArray()'), position);
-  assert.deepEqual(await evaluate('mesh.geometry.groups.map(g => g.count)'), [432, 72]);
+  assert.deepEqual(await evaluate('mesh.geometry.groups.map(g => g.count)'), [432, 216]);
   await click(['阵列修改器'], '适配全部');
   await set(['外框插槽管理'], '颜色', '#ff0000');
   await set(['内框插槽管理'], '颜色', '#00ff00');
@@ -170,7 +170,7 @@ try {
   // The red/green image is a diagnostic only. Restore source colors before
   // producing any non-diagnostic screenshots or testing other interactions.
   await set(['外框插槽管理'], '颜色', '#f3faff');
-  await set(['内框插槽管理'], '颜色', '#d1bfff');
+  await set(['内框插槽管理'], '颜色', '#d1aaff');
   await delay(100);
   await screenshot('array-2x3-original-colors.png');
   assert.equal(await evaluate(`(() => { let count = 0; scene.traverse(o => { if (o.isMesh) count++; }); return count; })()`), 1);
@@ -178,10 +178,10 @@ try {
   await delay(100);
   await set(['阵列修改器', '阵列 1'], '数量（含原件）', 3);
   assert.ok((await evaluate('arrayStatus()')).includes('256'));
-  await delay(150); assert.equal(await evaluate('mesh.geometry.index.count'), 84 * 200);
+  await delay(150); assert.equal(await evaluate('mesh.geometry.index.count'), 108 * 200);
   await set(['阵列修改器', '阵列 2'], '数量（含原件）', 3);
   await set(['阵列修改器', '阵列 2'], '启用', false);
-  await delay(100); assert.equal(await evaluate('mesh.geometry.index.count'), 168);
+  await delay(100); assert.equal(await evaluate('mesh.geometry.index.count'), 216);
   await set(['阵列修改器', '阵列 2'], '启用', true);
   await click(['阵列修改器', '阵列 2'], '上移');
   await click(['阵列修改器', '阵列 1'], '下移');
@@ -207,7 +207,7 @@ try {
   await click(['阵列修改器'], '重置全部');
   for (let i = 0; i < 8; i++) await click(['阵列修改器'], '新增阵列');
   await delay(100);
-  assert.equal(await evaluate('mesh.geometry.index.count'), 84 * 256);
+  assert.equal(await evaluate('mesh.geometry.index.count'), 108 * 256);
   await click(['阵列修改器'], '新增阵列');
   assert.ok((await evaluate('arrayStatus()')).includes('8'));
   await click(['阵列修改器'], '重置全部'); await delay(150);
@@ -218,7 +218,7 @@ try {
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 740, y: 500, button: 'left', buttons: 0, clickCount: 1 });
   assert.ok(Math.abs((await evaluate('__camera.position.toArray()'))[0]) > 0.1);
   await set(['外框插槽管理'], '颜色', '#f3faff');
-  await set(['内框插槽管理'], '颜色', '#d1bfff');
+  await set(['内框插槽管理'], '颜色', '#d1aaff');
   await click(['HDRI 环境设置'], '清除贴图');
   await delay(200);
   const resting = await evaluate('__renderCount'); await delay(400); assert.equal(await evaluate('__renderCount'), resting);

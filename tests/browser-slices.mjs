@@ -144,7 +144,7 @@ try {
   // Per-slot changes affect only their coefficient, not the other slot.
   await set(['内框插槽管理'], '颜色', '#dccbff'); await delay(100);
   assert.equal(await evaluate('mesh.material[0].color.getHexString()'), colors[0]);
-  await set(['内框插槽管理'], '颜色', '#d1bfff');
+  await set(['内框插槽管理'], '颜色', `#${colors[1]}`);
   await set(renderPath, '透射分辨率比例', 0.25); await delay(150);
   assert.deepEqual((await evaluate('readCounts(720,500)')).slice(0,2), [0,100]);
   await set(renderPath, '透射分辨率比例', 1);
