@@ -1,6 +1,6 @@
 ---
 type: decision
-status: active
+status: superseded
 kind: architecture
 importance: high
 updated: 2026-09-03
@@ -11,6 +11,8 @@ supersedes: null
 ---
 
 # ADR-001｜本地 Transmission 源码与双材质架构
+
+> 双对象绑定部分已由 [[决策/ADR-003-单网格双材质槽接入|ADR-003：单网格双材质槽接入]] 替代。本地 Transmission 框架和双材质独立控制原则继续保留。
 
 ## 背景
 

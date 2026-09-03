@@ -7,6 +7,7 @@ updated: 2026-09-03
 topic: viewer-coordinate-system
 source_logs:
   - "[[日志/2026-09-03-构建工程记忆并修正视角控制]]"
+  - "[[日志/2026-09-03-替换单网格双材质槽模型]]"
 supersedes: null
 ---
 
@@ -23,7 +24,7 @@ supersedes: null
 ## 理由
 
 - 与 `webgl_materials_physical_transmission.html` 的相机和 OrbitControls 轴系一致。
-- 不修改两个网格的内部父子关系或 Blender 源文件。
+- 轴向适配集中在根节点，不修改模型内部局部坐标或 Blender 源文件；单网格双材质槽模型继续采用相同规则。
 - 适配逻辑集中在模型根节点，后续维护清晰。
 
 ## 验证方式

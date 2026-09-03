@@ -3,15 +3,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from '../../source/threejs-transmission/examples/jsm/controls/OrbitControls.js';
 import { UltraHDRLoader } from '../../source/threejs-transmission/examples/jsm/loaders/UltraHDRLoader.js';
 import { GUI } from '../../source/threejs-transmission/examples/jsm/libs/lil-gui.module.min.js';
+import { prepareSpecimenMesh } from './specimenModel.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 const HDR_URL = new URL(
   '../../source/threejs-transmission/examples/textures/equirectangular/royal_esplanade_2k.hdr.jpg',
   import.meta.url,
 ).href;
-
-const OUTER_FRAME_NAME = 'SPECIMEN_OUTER_FRAME';
-const INNER_PANEL_NAME = 'SPECIMEN_INNER_PANEL';
 
 const DEFAULT_MATERIAL_PARAMETERS = Object.freeze({
   color: '#ffffff',
@@ -26,8 +24,10 @@ const DEFAULT_MATERIAL_PARAMETERS = Object.freeze({
   envMapIntensity: 1,
 });
 
-function createMaterialParameters() {
-  return { ...DEFAULT_MATERIAL_PARAMETERS };
+function createMaterialParameters(sourceMaterial) {
+  // GLTFLoader 已读取线性 Base Color；转为 GUI 使用的 sRGB 字符串。
+  // 仅继承颜色，物理参数继续使用本地 Transmission 示例的现有默认值。
+  return { ...DEFAULT_MATERIAL_PARAMETERS, color: `#${sourceMaterial.color.getHexString()}` };
 }
 
 function createTransmissionMaterial(parameters, environmentTexture) {
@@ -153,7 +153,7 @@ function replaceMaterial(mesh, material) {
     ? mesh.material
     : [mesh.material];
 
-  previousMaterials.filter(Boolean).forEach((previousMaterial) => {
+  new Set(previousMaterials.filter(Boolean)).forEach((previousMaterial) => {
     previousMaterial.dispose();
   });
 
@@ -278,22 +278,20 @@ export function createSpecimenViewer(container, { onError } = {}) {
     scene.background = environmentTexture;
     scene.environment = environmentTexture;
 
-    const outerFrame = gltf.scene.getObjectByName(OUTER_FRAME_NAME);
-    const innerPanel = gltf.scene.getObjectByName(INNER_PANEL_NAME);
-    const missingObjects = [];
-
-    if (!outerFrame?.isMesh) missingObjects.push(OUTER_FRAME_NAME);
-    if (!innerPanel?.isMesh) missingObjects.push(INNER_PANEL_NAME);
-
-    if (missingObjects.length) {
+    let specimenMesh;
+    try {
+      specimenMesh = prepareSpecimenMesh(gltf.scene);
+    } catch (error) {
+      scene.background = null;
+      scene.environment = null;
       loadedEnvironment.dispose();
       environmentTexture = null;
       disposeObjectResources(gltf.scene);
-      throw new Error(`模型缺少目标网格：${missingObjects.join('、')}`);
+      throw error;
     }
 
-    const outerParameters = createMaterialParameters();
-    const innerParameters = createMaterialParameters();
+    const outerParameters = createMaterialParameters(specimenMesh.material[0]);
+    const innerParameters = createMaterialParameters(specimenMesh.material[1]);
     const outerMaterial = createTransmissionMaterial(
       outerParameters,
       environmentTexture,
@@ -303,8 +301,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
       environmentTexture,
     );
 
-    replaceMaterial(outerFrame, outerMaterial);
-    replaceMaterial(innerPanel, innerMaterial);
+    outerMaterial.name = '外框插槽';
+    innerMaterial.name = '内框插槽';
+    replaceMaterial(specimenMesh, [outerMaterial, innerMaterial]);
 
     loadedModel = gltf.scene;
     scene.add(loadedModel);
@@ -312,7 +311,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
 
     gui = new GUI({ title: '材质参数', width: 300 });
 
-    const outerFolder = gui.addFolder('外框材质');
+    const outerFolder = gui.addFolder('外框插槽管理');
     bindMaterialFolder(
       outerFolder,
       outerParameters,
@@ -320,7 +319,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       requestRender,
     );
 
-    const innerFolder = gui.addFolder('内板材质');
+    const innerFolder = gui.addFolder('内框插槽管理');
     bindMaterialFolder(
       innerFolder,
       innerParameters,
