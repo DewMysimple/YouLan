@@ -4,8 +4,9 @@ import { OrbitControls } from '../../source/threejs-transmission/examples/jsm/co
 import { GUI } from '../../source/threejs-transmission/examples/jsm/libs/lil-gui.module.min.js';
 import { prepareSpecimenMesh } from './specimenModel.js';
 import { createEnvironmentManager } from './environmentManager.js';
-import { bindEnvironmentPanel, bindArrayPanel } from './viewerPanels.js';
+import { bindEnvironmentPanel, bindArrayPanel, bindSlicePanel } from './viewerPanels.js';
 import { fitArray } from './arrayModifier.js';
+import { createSliceAccumulation } from './sliceAccumulation.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 
@@ -231,13 +232,14 @@ export function createSpecimenViewer(container, { onError } = {}) {
   );
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = false;
+  const slices = createSliceAccumulation(renderer);
 
   const requestRender = () => {
     if (disposed || renderFrame) return;
 
     renderFrame = window.requestAnimationFrame(() => {
       renderFrame = 0;
-      if (!disposed) renderer.render(scene, camera);
+      if (!disposed) slices.render(scene, camera);
     });
   };
 
@@ -297,6 +299,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     loadedModel = gltf.scene;
     scene.add(loadedModel);
     frameModel(camera, controls, loadedModel);
+    slices.attach(specimenMesh);
 
     environment.setMaterials([
       { material: outerMaterial, parameters: outerParameters },
@@ -330,6 +333,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       transmissionResolutionScale: 1,
     };
     const renderFolder = gui.addFolder('渲染设置');
+    bindSlicePanel(renderFolder, slices, requestRender);
     outerFolder.close();
     innerFolder.close();
     renderFolder.close();
@@ -376,6 +380,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     controls.dispose();
     disposeArrayPanel?.();
     disposeEnvironmentPanel?.();
+    slices.dispose();
     environment.dispose();
     gui?.destroy();
 

@@ -63,7 +63,7 @@ try {
     }};
   ` });
   await send('Page.navigate', { url: process.env.VIEWER_URL || 'http://127.0.0.1:5173/' });
-  await until(`document.querySelectorAll('.lil-gui.root').length === 1 && document.querySelectorAll('.viewer-panel-status').length === 2 && __observed.some(o => o.isScene && o.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS'))`);
+  await until(`document.querySelectorAll('.lil-gui.root').length === 1 && document.querySelectorAll('.viewer-panel-status').length === 3 && __observed.some(o => o.isScene && o.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS'))`);
   await evaluate(`
     window.scene = __observed.findLast(o => o.isScene && o.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS'));
     window.mesh = scene.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS');

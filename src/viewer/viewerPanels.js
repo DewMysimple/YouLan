@@ -9,6 +9,27 @@ function statusLine(folder) {
   return element;
 }
 
+export function bindSlicePanel(folder, slices, requestRender) {
+  const { parameters, state } = slices;
+  const enabled = folder.add(parameters, 'enabled').name('切片颜色累积').onChange(refresh);
+  const strength = folder.add(parameters, 'strength', 0, 1, 0.01).name('累积强度').onChange(requestRender);
+  const limit = folder.add(parameters, 'limit', 0.1, 8, 0.1).name('加深上限').onChange(requestRender);
+  const clarity = folder.add(parameters, 'clarity', 0, 1, 0.01).name('HDRI 分级显色').onChange(requestRender);
+  const status = statusLine(folder);
+  function refresh() {
+    enabled.enable(state.supported);
+    strength.enable(state.supported && parameters.enabled);
+    limit.enable(state.supported && parameters.enabled);
+    clarity.enable(state.supported && parameters.enabled);
+    status.dataset.kind = state.supported ? 'ready' : 'warning';
+    status.textContent = !state.supported ? state.message : parameters.enabled
+      ? '按实际重叠累积染色，单片不额外加深。\nHDRI 显色：减少片内背景干扰，0 保留原透射细节。\n直线视线近似，不含逐层多次折射。'
+      : '原有玻璃渲染；切片不额外累积染色。';
+    requestRender();
+  }
+  refresh();
+}
+
 export function bindEnvironmentPanel(gui, environment) {
   const folder = gui.addFolder('HDRI 环境设置');
   const input = document.createElement('input');
