@@ -27,7 +27,7 @@ export function frameFirstSlice(camera, controls, bounds, fov) {
   controls.update();
 }
 
-export function bindDepthPresentation(gui, { camera, controls, array, slots, slices, bloom, emission, environment, renderer, renderParameters, requestRender }) {
+export function bindDepthPresentation(gui, { camera, controls, array, slots, slices, bloom, embeddedCore, emission, environment, renderer, renderParameters, requestRender }) {
   const folder = gui.addFolder('深邃效果');
   const parameters = { ...DEPTH_DEFAULTS };
   const originalColors = slots.map(({ parameters: slot }) => slot.color);
@@ -67,6 +67,7 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
       });
       emission.apply();
       Object.assign(slices.parameters, SLICE_DEFAULTS);
+      embeddedCore.parameters.enabled = true;
       Object.assign(bloom.parameters, BLOOM_DEFAULTS);
       Object.assign(parameters, DEPTH_DEFAULTS);
       Object.assign(environment.parameters, DEPTH_ENVIRONMENT);
@@ -75,8 +76,8 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
       renderer.transmissionResolutionScale = renderParameters.transmissionResolutionScale = 1;
       setArray(); frame(); refresh();
     },
-    baseline() { physical(); slices.parameters.enabled = false; bloom.parameters.enabled = false; refresh(); },
-    layersOnly() { physical(); Object.assign(slices.parameters, SLICE_DEFAULTS); bloom.parameters.enabled = false; refresh(); },
+    baseline() { physical(); slices.parameters.enabled = false; embeddedCore.parameters.enabled = false; bloom.parameters.enabled = false; refresh(); },
+    layersOnly() { physical(); Object.assign(slices.parameters, SLICE_DEFAULTS); embeddedCore.parameters.enabled = true; bloom.parameters.enabled = false; refresh(); },
     frame,
   };
   folder.add({ restore() { actions.restore(); void environment.loadBuiltin(); } }, 'restore').name('恢复调好的默认效果');
@@ -93,8 +94,8 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
   note.textContent = bloom.supported
-    ? '默认已调好。纵深控件会替换现有阵列。\n光晕只来自局部光纹，天空不参与。对照按钮保留当前相机、阵列、底色与 HDRI。'
-    : '当前设备不支持浮点光晕，保留原生透射与局部自发光。';
+    ? '默认已调好。纵深控件会替换现有阵列。\n侧面内嵌色体采用路径吸收近似，可在渲染设置关闭；纯透射对照不含此修正。光晕只来自局部光纹，天空不参与。对照保留相机、阵列、底色与 HDRI。'
+    : '当前设备不支持浮点光晕，保留透射与局部自发光。侧面内嵌色体采用路径吸收近似，可在渲染设置关闭；纯透射对照不含此修正。';
   folder.$children.appendChild(note);
   actions.restore();
   return actions;
