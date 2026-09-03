@@ -18,6 +18,7 @@ supersedes: null
 | 2026-09-03 | maintenance | 将仓库内工程记忆目录统一命名为 `wiki_memory`。 | archived | wiki-memory-directory-name | [[日志/2026-09-03-重命名工程记忆为wiki_memory.md|2026-09-03｜重命名工程记忆为 wiki_memory]] |
 | 2026-09-03 | maintenance | 严格保留外部模板中的 `wiki_memory/AGENTS.md` 和 `wiki_memory/llm-wiki.md`。 | archived | wiki-memory-template-completeness | [[日志/2026-09-03-补齐wiki_memory模板文件.md|2026-09-03｜补齐 wiki_memory 模板文件]] |
 | 2026-09-03 | bug | 用户提供五张侧视图片，指出正侧面饱和度不同、顶部多出不与内胆闭合的紫条，要求判断来源并修复。 | archived | embedded-core-closed-projection | [[日志/2026-09-03-统一内胆着色并修正顶部紫色越界.md|2026-09-03｜统一内胆着色并修正顶部紫色越界]] |
+| 2026-09-03 | feature | 用户提供三张侧面、顶部转角标注，要求外体和内体的四角有轻微可见的边，改善侧面缺失感，不能成为显眼线框。 | archived | specimen-soft-box-edges | [[日志/2026-09-03-添加外壳与内胆柔和轮廓.md|2026-09-03｜添加外壳与内胆柔和轮廓]] |
 | 2026-09-03 | bug | 建立 wiki_memory、固化 Git 收尾约定，并修复 OrbitControls 轴向体感。 | archived | viewer-controls-and-project-memory | [[日志/2026-09-03-构建工程记忆并修正视角控制.md|2026-09-03｜构建工程记忆并修正视角控制]] |
 | 2026-09-03 | feature | 替换为用户指定的 `source/Specimen_Frame_Transparent.blend`，根据 Three.js 官方资料添加自发光控制。 | archived | transparent-model-replacement-and-native-emission | [[日志/2026-09-03-替换透明模型并增加原生自发光.md|2026-09-03｜替换透明模型并增加原生自发光]] |
 | 2026-09-03 | feature | 将用户提供的单网格双材质槽模型接入本地 Vite 查看器，保持两个独立材质控制及现有渲染框架。 | archived | single-mesh-material-slots | [[日志/2026-09-03-替换单网格双材质槽模型.md|2026-09-03｜替换单网格双材质槽模型]] |

@@ -37,7 +37,7 @@ export function coreRayLength(origin, direction, bounds) {
 // Both the beauty and coverage passes use this exact closed-box intersection.
 // In particular, project through the front border too: restricting it to outer
 // side faces leaves a gap between the apparent top and the colored front face.
-const projection = `
+export const CORE_PROJECTION_GLSL = `
 uniform vec3 coreMin;
 uniform vec3 coreMax;
 uniform float coreWeight;
@@ -59,7 +59,7 @@ vec2 coreInterval(vec3 origin, vec3 direction) {
   return farT > nearT ? vec2(nearT, farT) : vec2(0.0);
 }
 `;
-const fragment = projection + `
+const fragment = CORE_PROJECTION_GLSL + `
 uniform vec3 coreColor;
 uniform float coreTransmission;
 `;
@@ -125,7 +125,7 @@ export function patchCoreCountShader(shader, uniforms) {
       vCoreWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     }`;
-  shader.fragmentShader = projection + `
+  shader.fragmentShader = CORE_PROJECTION_GLSL + `
     varying vec3 vCoreWorldPosition;
     void main() {
       vec3 ray = normalize((coreWorldInverse * vec4(vCoreWorldPosition - cameraPosition, 0.0)).xyz);
@@ -161,6 +161,8 @@ export function createEmbeddedCore(mesh) {
   let disposed = false;
   return {
     parameters,
+    // Share the exact displayed insert projection with its boundary treatment.
+    uniforms,
     patchCountMaterial(material) {
       patchCoreCountShader(material, uniforms);
       material.needsUpdate = true;

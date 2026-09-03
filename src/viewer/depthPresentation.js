@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createArrayLayer } from './arrayModifier.js';
 import { SLICE_DEFAULTS } from './sliceAccumulation.js';
 import { BLOOM_DEFAULTS } from './selectiveBloom.js';
+import { EDGE_DEFAULTS } from './softEdges.js';
 
 export const DEPTH_DEFAULTS = Object.freeze({ count: 16, spacing: 1.7, fov: 45 });
 export const DEPTH_ENVIRONMENT = Object.freeze({ intensity: 0.7, brightness: 2.2, blur: 0.06, rotation: 130, showBackground: true });
@@ -27,7 +28,7 @@ export function frameFirstSlice(camera, controls, bounds, fov) {
   controls.update();
 }
 
-export function bindDepthPresentation(gui, { camera, controls, array, slots, slices, bloom, embeddedCore, emission, environment, renderer, renderParameters, requestRender }) {
+export function bindDepthPresentation(gui, { camera, controls, array, slots, slices, bloom, embeddedCore, softEdges, emission, environment, renderer, renderParameters, requestRender }) {
   const folder = gui.addFolder('深邃效果');
   const parameters = { ...DEPTH_DEFAULTS };
   const originalColors = slots.map(({ parameters: slot }) => slot.color);
@@ -68,6 +69,7 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
       emission.apply();
       Object.assign(slices.parameters, SLICE_DEFAULTS);
       embeddedCore.parameters.enabled = true;
+      Object.assign(softEdges.parameters, EDGE_DEFAULTS);
       Object.assign(bloom.parameters, BLOOM_DEFAULTS);
       Object.assign(parameters, DEPTH_DEFAULTS);
       Object.assign(environment.parameters, DEPTH_ENVIRONMENT);
@@ -76,7 +78,7 @@ export function bindDepthPresentation(gui, { camera, controls, array, slots, sli
       renderer.transmissionResolutionScale = renderParameters.transmissionResolutionScale = 1;
       setArray(); frame(); refresh();
     },
-    baseline() { physical(); slices.parameters.enabled = false; embeddedCore.parameters.enabled = false; bloom.parameters.enabled = false; refresh(); },
+    baseline() { physical(); slices.parameters.enabled = false; embeddedCore.parameters.enabled = false; softEdges.parameters.strength = 0; bloom.parameters.enabled = false; refresh(); },
     layersOnly() { physical(); Object.assign(slices.parameters, SLICE_DEFAULTS); embeddedCore.parameters.enabled = true; bloom.parameters.enabled = false; refresh(); },
     frame,
   };

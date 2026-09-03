@@ -9,6 +9,7 @@ import { fitArray } from './arrayModifier.js';
 import { createSliceAccumulation } from './sliceAccumulation.js';
 import { createLocalEmission } from './localEmission.js';
 import { createEmbeddedCore } from './embeddedCore.js';
+import { createSoftEdges } from './softEdges.js';
 import { createSelectiveBloom } from './selectiveBloom.js';
 import { bindDepthPresentation, DEPTH_ENVIRONMENT } from './depthPresentation.js';
 
@@ -242,6 +243,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let disposeArrayPanel = null;
   let localEmission = null;
   let embeddedCore = null;
+  let softEdges = null;
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
@@ -270,6 +272,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       renderFrame = 0;
       if (!disposed) {
         embeddedCore?.update();
+        softEdges?.update();
         bloom.render(scene, camera);
       }
     });
@@ -338,6 +341,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     slices.attach(specimenMesh);
     embeddedCore = createEmbeddedCore(specimenMesh);
     slices.setCore(embeddedCore);
+    softEdges = createSoftEdges(specimenMesh, embeddedCore, renderer);
     bloom.attach(specimenMesh);
 
     environment.setMaterials([
@@ -373,6 +377,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     };
     const renderFolder = gui.addFolder('渲染设置');
     renderFolder.add(embeddedCore.parameters, 'enabled').name('内嵌色体透射').onChange(requestRender);
+    renderFolder.add(softEdges.parameters, 'strength', 0, 1, 0.01).name('轮廓清晰度').onChange(requestRender);
+    renderFolder.add(softEdges.parameters, 'width', 0.5, 2, 0.1).name('轮廓宽度（像素）').onChange(requestRender);
     bindSlicePanel(renderFolder, slices, requestRender);
     outerFolder.close();
     innerFolder.close();
@@ -400,7 +406,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     });
     bindDepthPresentation(gui, { camera, controls, array: disposeArrayPanel,
       slots: [{ material: outerMaterial, parameters: outerParameters }, { material: innerMaterial, parameters: innerParameters }],
-      slices, bloom, embeddedCore, emission: localEmission, environment, renderer, renderParameters, requestRender });
+      slices, bloom, embeddedCore, softEdges, emission: localEmission, environment, renderer, renderParameters, requestRender });
     gui.folders.filter(folder => folder._title !== '深邃效果').forEach(folder => folder.close());
     requestRender();
   };
@@ -429,6 +435,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     disposeArrayPanel?.();
     disposeEnvironmentPanel?.();
     bloom.dispose();
+    softEdges?.dispose();
     embeddedCore?.dispose();
     slices.dispose();
     localEmission?.dispose();
