@@ -185,9 +185,18 @@ export function bindArrayPanel(gui, mesh, requestRender, fit) {
     });
   }
   showResult(evaluateArray(layers, baseBounds));
-  return () => {
+  const dispose = () => {
     disposed = true;
     if (frame) cancelAnimationFrame(frame);
     base.dispose();
   };
+  // Internal preset API; the public viewer still returns its original cleanup.
+  dispose.setLayers = (next) => {
+    if (disposed) return false;
+    const valid = change(structuredClone(next), true);
+    if (valid) flush();
+    return valid;
+  };
+  dispose.baseBounds = baseBounds;
+  return dispose;
 }

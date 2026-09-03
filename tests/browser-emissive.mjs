@@ -13,11 +13,11 @@ const state = () => evaluate('mesh.material.map(m => [m.color.getHexString(),m.e
 const samples = [[720,500],[370,500],[200,500]]; // inner / outer / background
 const capture = async name => { await delay(150); return screenshot(name, samples); };
 try {
-  await b.open();
+  await b.open({ baseline: true });
   assert.deepEqual(await state(), [['f3faff','ffffff',0],['d1aaff','ffffff',0]]);
   const physicalDefaults = await evaluate('mesh.material.map(m => [m.transmission,m.opacity,m.metalness,m.roughness,m.ior,m.thickness,m.specularIntensity,m.specularColor.getHexString()])');
   assert.deepEqual(physicalDefaults, [[1,1,0,0,1.5,0.01,1,'ffffff'],[1,1,0,0,1.5,0.01,1,'ffffff']]);
-  assert.deepEqual(await evaluate('mesh.geometry.groups.map(g=>g.count)'), [72,36]);
+  assert.deepEqual(await evaluate('mesh.geometry.groups.map(g=>g.count)'), [72,12]);
   await evaluate(`window.basePositions=Array.from(mesh.geometry.attributes.position.array);
     window.frontCamera=__camera.position.toArray();
     window.redraw=()=>{setControl(['渲染设置'],'曝光',0.99);setControl(['渲染设置'],'曝光',1);};
@@ -86,8 +86,8 @@ try {
   await set([...array,'阵列 1','相对偏移'],'Z',-3);
   await set([...array,'阵列 1'],'数量（含原件）',100);
   await capture('emissive-100.png');
-  assert.equal(await evaluate('mesh.geometry.index.count'),10800);
-  assert.deepEqual(await evaluate('mesh.geometry.groups.map(g=>g.count)'),[7200,3600]);
+  assert.equal(await evaluate('mesh.geometry.index.count'),8400);
+  assert.deepEqual(await evaluate('mesh.geometry.groups.map(g=>g.count)'),[7200,1200]);
   assert.equal(await evaluate(`(()=>{let n=0;scene.traverse(o=>{if(o.isMesh)n++;});return n;})()`),1);
   await set(['渲染设置'],'切片颜色累积',false); await capture('emissive-100-no-accumulation.png');
   await set(['渲染设置'],'切片颜色累积',true);
@@ -112,11 +112,11 @@ try {
   await set(inner,'自发光强度',0.35); await capture('emissive-mobile.png');
   assert.equal((await state())[1][2],0.35);
   assert.equal(await evaluate(`(()=>{const r=controller(['内框插槽管理'],'自发光强度').getBoundingClientRect();return r.top>=0&&r.bottom<=844;})()`),true);
-  // A fresh page restores zero emission, no array and the white environment.
+  // Refresh restores the delivered depth preset (not the neutral test fixture).
   await b.open();
-  assert.deepEqual(await state(),[['f3faff','ffffff',0],['d1aaff','ffffff',0]]);
-  assert.equal(await evaluate('mesh.geometry.index.count'),108);
-  assert.equal(await evaluate('scene.background.getHexString()'),'ffffff');
+  assert.deepEqual(await state(),[['f3faff','fff0db',0.8],['d1aaff','ffe4fa',1.8]]);
+  assert.equal(await evaluate('mesh.geometry.index.count'),84*16);
+  await b.until(`scene.background?.isTexture && document.querySelector('.viewer-panel-status').textContent.includes('加载完成')`);
   assert.deepEqual(b.errors,[]);
   const report={baseline,levels,colored,resources,slots:'independent',environments:'white/HDRI/hidden/clear',array:100,refresh:'defaults restored',errors:b.errors};
   await writeFile(join(output,'emissive-report.json'),JSON.stringify(report,null,2));

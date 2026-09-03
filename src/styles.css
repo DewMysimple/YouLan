@@ -76,12 +76,14 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
-.viewer-panel-status {
+.viewer-panel-status,
+.viewer-effect-note {
   padding: 6px 8px;
   line-height: 1.5;
   white-space: pre-line;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
 }
 
 .viewer-panel-status[data-kind="error"] {

@@ -48,7 +48,7 @@ export async function browserHarness(output) {
   }
   const click = (path, label) => evaluate(`button(${JSON.stringify(path)}, ${JSON.stringify(label)}).click()`);
   const set = (path, label, value) => evaluate(`setControl(${JSON.stringify(path)}, ${JSON.stringify(label)}, ${JSON.stringify(value)})`);
-  async function open() {
+  async function open({ baseline = false } = {}) {
     await send('Page.enable'); await send('Runtime.enable');
     await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
     await send('Page.addScriptToEvaluateOnNewDocument', { source: `
@@ -85,6 +85,25 @@ export async function browserHarness(output) {
       };
     `);
     await delay(300);
+    if (baseline) {
+      // Legacy feature regression in a neutral single-object scene, separate
+      // from browser-depth's assertions of the new delivered defaults.
+      await click(['深邃效果'], '纯透射对照');
+      await click(['阵列修改器'], '重置全部');
+      await click(['HDRI 环境设置'], '清除贴图');
+      for (const path of [['外框插槽管理'], ['内框插槽管理']]) {
+        await set(path, '仅局部光纹发光', false);
+        await set(path, '自发光颜色', '#ffffff');
+        await set(path, '粗糙度', 0);
+        await set(path, '折射率（IOR）', 1.5);
+        await set(path, '厚度', 0.01);
+      }
+      for (const [label,value] of [['环境强度',1],['背景亮度',1],['背景模糊',0],['水平旋转（°）',0]]) await set(['HDRI 环境设置'],label,value);
+      await set(['渲染设置'], '切片颜色累积', true);
+      await set(['渲染设置'], '累积强度', 0.18);
+      await set(['渲染设置'], 'HDRI 分级显色', 0.75);
+      await delay(200);
+    }
   }
   return { send, evaluate, until, screenshot, click, set, open, delay, errors, close: () => ws.close() };
 }

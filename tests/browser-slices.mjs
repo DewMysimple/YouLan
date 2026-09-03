@@ -11,7 +11,7 @@ const renderPath = ['渲染设置'];
 const layerPath = ['阵列修改器','阵列 1'];
 const offsetPath = [...layerPath,'相对偏移'];
 try {
-  await b.open();
+  await b.open({ baseline: true });
   await evaluate(`window.forceTestRender = () => { setControl(['渲染设置'], '曝光', 0.99); setControl(['渲染设置'], '曝光', 1); };
     window.readCounts = async (x,y) => {
       const THREE = await import('/source/threejs-transmission/build/three.module.js');

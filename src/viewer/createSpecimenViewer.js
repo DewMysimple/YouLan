@@ -7,6 +7,9 @@ import { createEnvironmentManager } from './environmentManager.js';
 import { bindEnvironmentPanel, bindArrayPanel, bindSlicePanel } from './viewerPanels.js';
 import { fitArray } from './arrayModifier.js';
 import { createSliceAccumulation } from './sliceAccumulation.js';
+import { createLocalEmission } from './localEmission.js';
+import { createSelectiveBloom } from './selectiveBloom.js';
+import { bindDepthPresentation, DEPTH_ENVIRONMENT } from './depthPresentation.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 
@@ -236,6 +239,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let loadedModel = null;
   let disposeEnvironmentPanel = null;
   let disposeArrayPanel = null;
+  let localEmission = null;
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
@@ -255,13 +259,14 @@ export function createSpecimenViewer(container, { onError } = {}) {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = false;
   const slices = createSliceAccumulation(renderer);
+  const bloom = createSelectiveBloom(renderer, slices.render);
 
   const requestRender = () => {
     if (disposed || renderFrame) return;
 
     renderFrame = window.requestAnimationFrame(() => {
       renderFrame = 0;
-      if (!disposed) slices.render(scene, camera);
+      if (!disposed) bloom.render(scene, camera);
     });
   };
 
@@ -271,6 +276,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
   });
   gui = new GUI({ title: '材质参数', width: 300 });
   disposeEnvironmentPanel = bindEnvironmentPanel(gui, environment);
+  Object.assign(environment.parameters, DEPTH_ENVIRONMENT);
+  environment.apply();
+  void environment.loadBuiltin();
 
   const resizeObserver = new ResizeObserver(() => {
     if (disposed) return;
@@ -321,7 +329,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
     loadedModel = gltf.scene;
     scene.add(loadedModel);
     frameModel(camera, controls, loadedModel);
+    localEmission = createLocalEmission(specimenMesh);
     slices.attach(specimenMesh);
+    bloom.attach(specimenMesh);
 
     environment.setMaterials([
       { material: outerMaterial, parameters: outerParameters },
@@ -361,7 +371,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     renderFolder.close();
 
     renderFolder
-      .add(renderParameters, 'exposure', 0, 1, 0.01)
+      .add(renderParameters, 'exposure', 0, 2, 0.01)
       .name('曝光')
       .onChange((value) => {
         renderer.toneMappingExposure = value;
@@ -376,6 +386,14 @@ export function createSpecimenViewer(container, { onError } = {}) {
         requestRender();
       });
 
+    [outerFolder, innerFolder].forEach((folder, slot) => {
+      folder.add(localEmission.parameters[slot], 'localized').name('仅局部光纹发光')
+        .onChange(() => { localEmission.apply(); requestRender(); });
+    });
+    bindDepthPresentation(gui, { camera, controls, array: disposeArrayPanel,
+      slots: [{ material: outerMaterial, parameters: outerParameters }, { material: innerMaterial, parameters: innerParameters }],
+      slices, bloom, emission: localEmission, environment, renderer, renderParameters, requestRender });
+    gui.folders.filter(folder => folder._title !== '深邃效果').forEach(folder => folder.close());
     requestRender();
   };
 
@@ -402,7 +420,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
     controls.dispose();
     disposeArrayPanel?.();
     disposeEnvironmentPanel?.();
+    bloom.dispose();
     slices.dispose();
+    localEmission?.dispose();
     environment.dispose();
     gui?.destroy();
 

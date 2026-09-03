@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 import { UltraHDRLoader } from '../../source/threejs-transmission/examples/jsm/loaders/UltraHDRLoader.js';
 
-const BUILTIN_URL = new URL(
-  '../../source/threejs-transmission/examples/textures/equirectangular/royal_esplanade_2k.hdr.jpg',
-  import.meta.url,
-).href;
+const BUILTIN_URL = '/environments/citrus_orchard_road_puresky_4k.exr';
 
 // The bundled loader's asynchronous gainmap error callback throws rather than
 // rejecting loadAsync. Adapt that callback without modifying the bundled source.
@@ -150,7 +147,7 @@ export function createEnvironmentManager(scene, requestRender, {
     subscribe(listener) { listeners.add(listener); listener(state); return () => listeners.delete(listener); },
     loadFile(file) { return load(file.name, () => file.arrayBuffer()); },
     loadBuiltin() {
-      return load('royal_esplanade_2k.hdr.jpg', async (signal) => {
+      return load('citrus_orchard_road_puresky_4k.exr', async (signal) => {
         const response = await fetch(BUILTIN_URL, { signal });
         if (!response.ok) throw new Error(`内置贴图请求失败（${response.status}）。`);
         return response.arrayBuffer();

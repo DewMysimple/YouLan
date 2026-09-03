@@ -2,6 +2,7 @@ import os
 import sys
 
 import bpy
+import bmesh
 
 
 TARGET_OBJECT = "SPECIMEN_OUTER_FRAME"
@@ -34,6 +35,32 @@ def main():
         raise RuntimeError(f"材质槽必须依次为外框、内框：{MATERIAL_SLOTS}，实际为 {slot_names}")
     if {polygon.material_index for polygon in target.data.polygons} != {0, 1}:
         raise RuntimeError("模型面必须且只能使用外框槽位 0 和内框槽位 1。")
+
+    # The supplied mesh shares vertices across the two colored regions; it is
+    # not two independent closed solids. Four internal panel walls produce
+    # eight three-face edges. Derive one closed shell in this export session.
+    # Never save this temporary data block back to the source .blend.
+    target.data = target.data.copy()
+    mesh = bmesh.new()
+    try:
+        mesh.from_mesh(target.data)
+        mesh.normal_update()
+        walls = [face for face in mesh.faces if face.material_index == 1
+                 and abs(face.normal.x) < 0.01
+                 and sum(len(edge.link_faces) == 3 for edge in face.edges) == 2]
+        if len(walls) != 4 or len(mesh.faces) != 18:
+            raise RuntimeError("源模型拓扑已改变；必须重新检查内部壁，不能盲目删除。")
+        bmesh.ops.delete(mesh, geom=walls, context="FACES_ONLY")
+        wires = [edge for edge in mesh.edges if not edge.link_faces]
+        bmesh.ops.delete(mesh, geom=wires, context="EDGES")
+        mesh.normal_update()
+        if len(mesh.faces) != 14 or any(len(edge.link_faces) != 2 for edge in mesh.edges):
+            raise RuntimeError("移除内部壁后未得到封闭的连续外壳。")
+        mesh.to_mesh(target.data)
+        target.data.update()
+        print("SPECIMEN_SHELL=continuous;removed_internal_quads=4;triangles=28")
+    finally:
+        mesh.free()
 
     bpy.ops.object.select_all(action="DESELECT")
 

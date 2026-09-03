@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 
-export const SLICE_DEFAULTS = Object.freeze({ enabled: true, strength: 0.18, limit: 3, clarity: 0.75 });
+export const SLICE_DEFAULTS = Object.freeze({ enabled: true, strength: 0.09, limit: 3, clarity: 0 });
 
 // Beer-style absorption in linear RGB, with an artistic soft ceiling. It depends
 // on local overlap, never the array's total count or the copy's index/distance.
 export function sliceExponent(count, strength, limit) {
-  return limit * -Math.expm1(-Math.max(count - 1, 0) * strength / limit);
+  const opticalLength = Math.max(count - 1, 0) * strength;
+  return limit * opticalLength / (limit + opticalLength);
 }
 
 export function absorptionCoefficients(material, target = new THREE.Vector3()) {
@@ -31,7 +32,8 @@ const absorption = `
     vec4 sliceClip = projectionMatrix * viewMatrix * vec4(vWorldPosition, 1.0);
     vec2 sliceUv = sliceClip.xy / sliceClip.w * 0.5 + 0.5;
     vec2 extra = max(texture2D(sliceCounts, sliceUv).rg - vec2(1.0), vec2(0.0));
-    vec2 depth = sliceSettings.z * (vec2(1.0) - exp(-extra * sliceSettings.y / sliceSettings.z));
+    vec2 opticalLength = extra * sliceSettings.y;
+    vec2 depth = sliceSettings.z * opticalLength / (vec2(sliceSettings.z) + opticalLength);
     vec3 opticalDepth = sliceOuterAbsorption * depth.x + sliceInnerAbsorption * depth.y;
     // Optional artistic readability, not additional physical scattering. Only
     // with an image background, blend toward this same material under neutral
@@ -119,7 +121,7 @@ export function createSliceAccumulation(renderer) {
         previousCompile.call(this, shader, context);
         patchSliceShader(shader, uniforms);
       };
-      material.customProgramCacheKey = () => `${key}:slice-absorption-v1`;
+      material.customProgramCacheKey = () => `${key}:slice-absorption-v2-rational`;
       material.needsUpdate = true;
       restoreHooks.push(() => {
         material.onBeforeCompile = previousCompile;

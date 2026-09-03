@@ -22,6 +22,7 @@ supersedes: null
 | 2026-09-03 | feature | 将用户提供的单网格双材质槽模型接入本地 Vite 查看器，保持两个独立材质控制及现有渲染框架。 | archived | single-mesh-material-slots | [[日志/2026-09-03-替换单网格双材质槽模型.md|2026-09-03｜替换单网格双材质槽模型]] |
 | 2026-09-03 | feature | 用户要求结合 Three.js 资料搜索与代码实践，使同一种紫色随实际穿过的切片数逐级加深；过程中追加反馈：白底可见分级，HDRI 背景下不明显。 | archived | slice-color-accumulation-and-hdri-readability | [[日志/2026-09-03-实现切片颜色累积与HDRI分级显色.md|2026-09-03｜实现切片颜色累积与 HDRI 分级显色]] |
 | 2026-09-03 | feature | 在现有面板增加可替换 HDRI 与可叠加基础阵列，保持单网格双材质槽和本地 Transmission 框架。 | archived | hdri-settings-and-basic-array | [[日志/2026-09-03-增加HDRI设置与基础阵列.md|2026-09-03｜增加 HDRI 设置与基础阵列]] |
+| 2026-09-03 | feature | 根据 Three.js 官方资料，解决模型内部壁、透射对照、后段颜色饱和和局部光晕问题；交付调好的默认效果，替换用户指定的 Citrus Orchard EXR。 | archived | depth-presentation-shell-and-selective-bloom | [[日志/2026-09-03-修正连续外壳并交付深邃默认效果.md|2026-09-03｜修正连续外壳并交付深邃默认效果]] |
 
 ## 使用方式
 
