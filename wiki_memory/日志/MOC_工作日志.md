@@ -15,6 +15,7 @@ supersedes: null
 
 | 时间 | 类型 | 目标 | 状态 | 主题 | 日志 |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-04 | discussion | - | archived | retain-hdri-after-removal-audit | [[日志/2026-09-04-评估HDRI移除并决定保留.md|2026-09-04｜评估 HDRI 移除并决定保留]] |
 | 2026-09-04 | feature | - | archived | infinite-sun-depth-panel | [[日志/2026-09-04-统一纵深面板并增加无限远太阳.md|统一纵深面板并增加无限远太阳]] |
 | 2026-09-04 | bug | - | archived | pointer-camera-parallax | [[日志/2026-09-04-深度修复指针视差与轨道交接.md|2026-09-04｜深度修复指针视差与轨道交接]] |
 | 2026-09-04 | feature | - | archived | isolated-pollen-scene | [[日志/2026-09-04-实现隔离花粉星云场景.md|2026-09-04｜实现隔离花粉星云场景]] |
