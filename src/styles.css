@@ -97,6 +97,7 @@ select {
 .viewer-panel-status,
 .viewer-scene-status,
 .viewer-particle-status,
+.viewer-firework-status,
 .viewer-effect-note {
   padding: 6px 8px;
   line-height: 1.5;
@@ -112,6 +113,10 @@ select {
 
 .viewer-particle-status {
   color: #ffd1ef;
+}
+
+.viewer-firework-status {
+  color: #c9ffd2;
 }
 
 .viewer-panel-status[data-kind="error"] {

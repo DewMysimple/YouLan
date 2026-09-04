@@ -18,6 +18,8 @@ import { createDreamAtmosphere, bindAtmospherePanel } from './dreamAtmosphere.js
 import { createTransparentOrdering } from './transparentOrdering.js';
 import { createPointerParallax, bindPointerParallaxPanel } from './pointerParallax.js';
 import { createPollenScene, bindPollenPanel } from './pollenScene.js';
+import { createFireworkScene, bindFireworkPanel } from './fireworkScene.js';
+import { createFireworkPost } from './fireworkPost.js';
 import { createSceneSwitcher } from './sceneSwitcher.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
@@ -260,6 +262,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let refreshAtmospherePanel = null;
   let pointerParallax = null;
   let pollen = null;
+  let firework = null;
+  let fireworkPost = null;
   let sceneSwitcher = null;
   let disposePollenBackdrop = null;
 
@@ -276,6 +280,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
   const pollenScene = new THREE.Scene();
   pollenScene.name = '场景2·花粉星云';
   pollenScene.background = new THREE.Color('#ffffff');
+  const fireworkScene = new THREE.Scene();
+  fireworkScene.name = '场景3·金菊闪柳烟花';
+  fireworkScene.background = new THREE.Color('#000000');
   const camera = new THREE.PerspectiveCamera(
     40,
     Math.max(container.clientWidth, 1) / Math.max(container.clientHeight, 1),
@@ -302,6 +309,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         pointerParallax?.apply();
         let atmosphereAnimated = false;
         let pollenAnimated = false;
+        let fireworkAnimated = false;
         try {
           if (activeSceneId === 'specimen') {
             atmosphereAnimated = atmosphere.update(timestamp, !document.hidden);
@@ -310,15 +318,18 @@ export function createSpecimenViewer(container, { onError } = {}) {
             softEdges?.update();
             transparentOrdering?.update(camera);
             atmosphere.renderWithBackground(() => bloom.render(scene, camera), scene);
-          } else {
+          } else if (activeSceneId === 'pollen') {
             atmosphereAnimated = atmosphere.updateBackground(timestamp, !document.hidden);
             pollenAnimated = pollen?.update(timestamp, !document.hidden) ?? false;
             atmosphere.renderWithBackground(() => renderer.render(pollenScene, camera), pollenScene);
+          } else {
+            fireworkAnimated = firework?.update(timestamp, !document.hidden) ?? false;
+            fireworkPost?.render();
           }
         } finally {
           pointerParallax?.restoreCamera();
         }
-        if (atmosphereAnimated || pollenAnimated || parallaxAnimated) requestRender();
+        if (atmosphereAnimated || pollenAnimated || fireworkAnimated || parallaxAnimated) requestRender();
       }
     });
   };
@@ -328,11 +339,27 @@ export function createSpecimenViewer(container, { onError } = {}) {
   pollen = createPollenScene(pollenScene, renderer, requestRender, {
     reducedMotion: motionPreference.matches,
   });
+  firework = createFireworkScene(fireworkScene, renderer, requestRender, {
+    reducedMotion: motionPreference.matches,
+  });
+  fireworkPost = createFireworkPost(
+    renderer,
+    fireworkScene,
+    camera,
+    firework.parameters,
+    () => firework.renderScale,
+  );
+  fireworkPost.setSize(
+    Math.max(container.clientWidth, 1),
+    Math.max(container.clientHeight, 1),
+    Math.min(window.devicePixelRatio, 2),
+  );
   disposePollenBackdrop = atmosphere.createSharedBackdrop(pollenScene);
   const visibilityChange = () => {
     atmosphere.pauseClock();
     pointerParallax.pauseClock();
     pollen.pauseClock();
+    firework.pauseClock();
     sceneSwitcher?.pauseClock();
     if (document.hidden) pointerParallax.resetInput({ immediate: true });
     if (document.hidden && renderFrame) { window.cancelAnimationFrame(renderFrame); renderFrame = 0; }
@@ -349,7 +376,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   motionPreference.addEventListener('change', motionChange);
 
   controls.addEventListener('change', requestRender);
-  const environment = createEnvironmentManager([scene, pollenScene], requestRender, {
+  const environment = createEnvironmentManager([scene, pollenScene, fireworkScene], requestRender, {
     maxTextureSize: renderer.capabilities.maxTextureSize,
   });
   gui = new GUI({ title: '场景参数', width: 310 });
@@ -372,6 +399,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
 
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
+    fireworkPost?.setSize(width, height, Math.min(window.devicePixelRatio, 2));
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     requestRender();
@@ -485,6 +513,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       slices, bloom, embeddedCore, softEdges, atmosphere, parallax: pointerParallax, emission: localEmission, environment, renderer, renderParameters, requestRender });
     refreshAtmospherePanel = bindAtmospherePanel(gui, atmosphere, requestRender);
     const pollenFolder = bindPollenPanel(gui, pollen, requestRender);
+    const fireworkFolder = bindFireworkPanel(gui, firework, requestRender);
     const specimenFolders = ['深邃效果', '外框插槽管理', '内框插槽管理', '渲染设置']
       .map((title) => gui.folders.find((folder) => folder._title === title));
     sceneSwitcher = createSceneSwitcher(gui, {
@@ -495,8 +524,11 @@ export function createSpecimenViewer(container, { onError } = {}) {
       specimenScene: scene,
       pollenScene,
       pollen,
+      fireworkScene,
+      firework,
       specimenFolders,
       pollenFolders: [pollenFolder],
+      fireworkFolders: [fireworkFolder],
     });
     organizeViewerPanel(gui);
     gui.folders.filter(folder => !['场景选择', '深邃效果'].includes(folder._title)).forEach(folder => folder.close());
@@ -535,6 +567,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     atmosphere.dispose();
     disposePollenBackdrop?.();
     pollen.dispose();
+    fireworkPost?.dispose();
+    firework.dispose();
     softEdges?.dispose();
     embeddedCore?.dispose();
     slices.dispose();

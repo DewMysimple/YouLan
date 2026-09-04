@@ -3,6 +3,7 @@ import * as THREE from 'three';
 export const SCENE_LABELS = Object.freeze({
   specimen: '场景1·标本纵深',
   pollen: '场景2·花粉星云',
+  firework: '场景3·金菊闪柳烟花',
 });
 
 function cameraState(camera, controls) {
@@ -48,8 +49,11 @@ export function createSceneSwitcher(gui, {
   specimenScene,
   pollenScene,
   pollen,
+  fireworkScene,
+  firework,
   specimenFolders,
   pollenFolders,
+  fireworkFolders,
 }) {
   const initialSpecimen = cameraState(camera, controls);
   const initialPollen = {
@@ -67,6 +71,19 @@ export function createSceneSwitcher(gui, {
   scratch.position.copy(initialPollen.position);
   scratch.lookAt(initialPollen.target);
   initialPollen.quaternion.copy(scratch.quaternion);
+  const initialFirework = {
+    position: new THREE.Vector3(0, 1.1, 21),
+    quaternion: new THREE.Quaternion(),
+    target: new THREE.Vector3(0, 0.4, -8),
+    fov: 44,
+    near: 0.05,
+    far: 300,
+    minDistance: 8,
+    maxDistance: 90,
+  };
+  scratch.position.copy(initialFirework.position);
+  scratch.lookAt(initialFirework.target);
+  initialFirework.quaternion.copy(scratch.quaternion);
 
   const entries = {
     specimen: {
@@ -87,6 +104,15 @@ export function createSceneSwitcher(gui, {
       activate: () => pollen.activate(),
       deactivate: () => pollen.deactivate(),
     },
+    firework: {
+      label: SCENE_LABELS.firework,
+      scene: fireworkScene,
+      state: cloneState(initialFirework),
+      initial: cloneState(initialFirework),
+      folders: fireworkFolders,
+      activate: () => firework.activate(),
+      deactivate: () => firework.deactivate(),
+    },
   };
   const byLabel = Object.fromEntries(Object.entries(entries).map(([id, entry]) => [entry.label, id]));
   const parameters = { scene: SCENE_LABELS.specimen };
@@ -103,9 +129,11 @@ export function createSceneSwitcher(gui, {
       entry.folders.forEach((item) => item.show(id === activeId));
     }
     status.dataset.scene = activeId;
-    status.textContent = activeId === 'specimen'
-      ? '已隔离激活场景1：标本透明、纵深、太阳与 Bloom'
-      : '已隔离激活场景2：三层花粉粒子与中央能量核心';
+    status.textContent = {
+      specimen: '已隔离激活场景1：标本透明、纵深、太阳与 Bloom',
+      pollen: '已隔离激活场景2：三层花粉粒子与中央能量核心',
+      firework: '已隔离激活场景3：金菊主枝、冷绿闪烁簇与柳尾 Bloom',
+    }[activeId];
   }
 
   function switchTo(nextId) {
@@ -138,12 +166,14 @@ export function createSceneSwitcher(gui, {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '两个场景共用开发服务器、Canvas、HDRI、程序混色背景与指针视差；几何、动画、透明排序和场景参数互不进入对方管线。切换时分别保留两个场景的相机角度。';
+  note.textContent = '三个场景共用开发服务器、Canvas、HDRI 和指针视差；场景1/2继续共用原梦境背景，场景3使用独立可调夜空。几何、动画和后处理互不进入对方管线，切换时分别保留三套相机角度。';
   folder.$children.appendChild(note);
 
   specimenScene.visible = true;
   pollenScene.visible = false;
+  fireworkScene.visible = false;
   pollen.deactivate();
+  firework.deactivate();
   refreshFolders();
 
   return {
@@ -152,12 +182,19 @@ export function createSceneSwitcher(gui, {
     get activeId() { return activeId; },
     get activeScene() { return entries[activeId].scene; },
     switchTo,
-    pauseClock() { if (activeId === 'pollen') pollen.pauseClock(); },
-    setReducedMotion(value) { pollen.setReducedMotion(value); },
+    pauseClock() {
+      if (activeId === 'pollen') pollen.pauseClock();
+      if (activeId === 'firework') firework.pauseClock();
+    },
+    setReducedMotion(value) {
+      pollen.setReducedMotion(value);
+      firework.setReducedMotion(value);
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
       pollen.deactivate();
+      firework.deactivate();
     },
   };
 }

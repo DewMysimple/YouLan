@@ -30,6 +30,15 @@ export function organizeViewerPanel(gui) {
       ['色彩与发光', ['微尘颜色', '花粉颜色', '花瓣颜色', '粒子柔光', '能量核心强度', '能量核心大小']],
       ['操作', ['重置粒子场景']],
     ],
+    '场景3·金菊闪柳烟花': [
+      ['播放与时间', ['启用烟花场景', '播放动画', '循环播放', '播放速度', '时间预览（秒）', '从头播放', '升空时长', '绽放时长']],
+      ['金菊结构', ['金菊主枝数量', '每枝尾迹密度', '绽放速度', '整体展开范围', '三维纵深', '柳尾下坠', '空气阻力', '横向风力', '金色尾迹长度', '金色尾迹宽度']],
+      ['闪烁与爆心', ['闪烁粒子数量', '闪烁粒子大小', '冷绿闪烁强度', '闪烁持续时间', '爆心闪光强度', '爆心烟晕范围']],
+      ['烟花色彩', ['金菊主枝颜色', '柳尾余烬颜色', '冷绿闪烁颜色', '爆心闪光颜色']],
+      ['独立夜空', ['夜空风格', '夜空缓慢流动', '夜空流动速度', '夜空混色强度', '夜空底色', '烟霞颜色', '梦境辅色']],
+      ['光晕与性能', ['启用烟花 Bloom', '烟花光晕强度', '烟花光晕半径', '烟花光晕阈值', '性能档位']],
+      ['操作', ['重置烟花场景']],
+    ],
   };
   const material = [
     ['颜色与透射', ['颜色', '透射率', '不透明度', '写入深度（遮挡后层）']],
@@ -37,7 +46,7 @@ export function organizeViewerPanel(gui) {
     ['自发光', ['自发光颜色', '自发光强度', '仅局部光纹发光']],
   ];
   layouts['外框插槽管理'] = layouts['内框插槽管理'] = material;
-  const order = ['场景选择', '深邃效果', '场景2·花粉星云', '梦境背景与迎光', '指针视差', 'HDRI 环境设置', '外框插槽管理', '内框插槽管理', '渲染设置'];
+  const order = ['场景选择', '深邃效果', '场景2·花粉星云', '场景3·金菊闪柳烟花', '梦境背景与迎光', '指针视差', 'HDRI 环境设置', '外框插槽管理', '内框插槽管理', '渲染设置'];
   for (const title of order) {
     const folder = gui.folders.find(f => f._title === title);
     if (!folder) continue;
@@ -59,6 +68,9 @@ export function organizeViewerPanel(gui) {
       }
       if (title === '场景2·花粉星云' && name === '三层粒子') {
         folder.$children.appendChild(folder.$children.querySelector('.viewer-particle-status'));
+      }
+      if (title === '场景3·金菊闪柳烟花' && name === '播放与时间') {
+        folder.$children.appendChild(folder.$children.querySelector('.viewer-firework-status'));
       }
     }
     const notes = Array.from(folder.$children.querySelectorAll(':scope > .viewer-effect-note'));
