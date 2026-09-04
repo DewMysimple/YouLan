@@ -39,6 +39,14 @@ export function organizeViewerPanel(gui) {
       ['光晕与性能', ['启用烟花 Bloom', '烟花光晕强度', '烟花光晕半径', '烟花光晕阈值', '性能档位']],
       ['操作', ['重置烟花场景']],
     ],
+    '场景4·无限花开': [
+      ['播放与循环', ['启用无限花开', '播放绽放', '无限循环', '绽放速度', '周期预览', '从花苞重新绽放', '单次周期（秒）']],
+      ['花冠结构', ['叠加花冠代数', '花瓣展开阶段', '盛放停留阶段', '代际旋转角（°）', '花冠整体尺寸', '代际纵深间距', '呼吸起伏', '花瓣微风', '显示原始枝叶']],
+      ['真实材质', ['花瓣整体染色', '花瓣粗糙度', '2K 法线纹理强度', '次表面透光强度', '次表面透光颜色', 'HDRI 质感强度']],
+      ['灯光', ['暖色主光', '冷色轮廓光']],
+      ['独立背景', ['背景缓慢流动', '背景流动速度', '背景混色强度', '背景顶部颜色', '背景底部颜色', '背景花影颜色']],
+      ['操作', ['重置无限花开']],
+    ],
   };
   const material = [
     ['颜色与透射', ['颜色', '透射率', '不透明度', '写入深度（遮挡后层）']],
@@ -46,7 +54,7 @@ export function organizeViewerPanel(gui) {
     ['自发光', ['自发光颜色', '自发光强度', '仅局部光纹发光']],
   ];
   layouts['外框插槽管理'] = layouts['内框插槽管理'] = material;
-  const order = ['场景选择', '深邃效果', '场景2·花粉星云', '场景3·金菊闪柳烟花', '梦境背景与迎光', '指针视差', 'HDRI 环境设置', '外框插槽管理', '内框插槽管理', '渲染设置'];
+  const order = ['场景选择', '深邃效果', '场景2·花粉星云', '场景3·金菊闪柳烟花', '场景4·无限花开', '梦境背景与迎光', '指针视差', 'HDRI 环境设置', '外框插槽管理', '内框插槽管理', '渲染设置'];
   for (const title of order) {
     const folder = gui.folders.find(f => f._title === title);
     if (!folder) continue;
@@ -71,6 +79,9 @@ export function organizeViewerPanel(gui) {
       }
       if (title === '场景3·金菊闪柳烟花' && name === '播放与时间') {
         folder.$children.appendChild(folder.$children.querySelector('.viewer-firework-status'));
+      }
+      if (title === '场景4·无限花开' && name === '播放与循环') {
+        folder.$children.appendChild(folder.$children.querySelector('.viewer-flower-status'));
       }
     }
     const notes = Array.from(folder.$children.querySelectorAll(':scope > .viewer-effect-note'));

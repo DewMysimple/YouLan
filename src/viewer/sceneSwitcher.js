@@ -4,6 +4,7 @@ export const SCENE_LABELS = Object.freeze({
   specimen: '场景1·标本纵深',
   pollen: '场景2·花粉星云',
   firework: '场景3·金菊闪柳烟花',
+  flower: '场景4·无限花开',
 });
 
 function cameraState(camera, controls) {
@@ -51,9 +52,12 @@ export function createSceneSwitcher(gui, {
   pollen,
   fireworkScene,
   firework,
+  flowerScene,
+  flower,
   specimenFolders,
   pollenFolders,
   fireworkFolders,
+  flowerFolders,
 }) {
   const initialSpecimen = cameraState(camera, controls);
   const initialPollen = {
@@ -84,6 +88,19 @@ export function createSceneSwitcher(gui, {
   scratch.position.copy(initialFirework.position);
   scratch.lookAt(initialFirework.target);
   initialFirework.quaternion.copy(scratch.quaternion);
+  const initialFlower = {
+    position: new THREE.Vector3(0, .45, 13.5),
+    quaternion: new THREE.Quaternion(),
+    target: new THREE.Vector3(0, -.25, 0),
+    fov: 38,
+    near: .05,
+    far: 220,
+    minDistance: 4,
+    maxDistance: 60,
+  };
+  scratch.position.copy(initialFlower.position);
+  scratch.lookAt(initialFlower.target);
+  initialFlower.quaternion.copy(scratch.quaternion);
 
   const entries = {
     specimen: {
@@ -113,6 +130,15 @@ export function createSceneSwitcher(gui, {
       activate: () => firework.activate(),
       deactivate: () => firework.deactivate(),
     },
+    flower: {
+      label: SCENE_LABELS.flower,
+      scene: flowerScene,
+      state: cloneState(initialFlower),
+      initial: cloneState(initialFlower),
+      folders: flowerFolders,
+      activate: () => flower.activate(),
+      deactivate: () => flower.deactivate(),
+    },
   };
   const byLabel = Object.fromEntries(Object.entries(entries).map(([id, entry]) => [entry.label, id]));
   const parameters = { scene: SCENE_LABELS.specimen };
@@ -133,6 +159,7 @@ export function createSceneSwitcher(gui, {
       specimen: '已隔离激活场景1：标本透明、纵深、太阳与 Bloom',
       pollen: '已隔离激活场景2：三层花粉粒子与中央能量核心',
       firework: '已隔离激活场景3：金菊主枝、冷绿闪烁簇与柳尾 Bloom',
+      flower: '已隔离激活场景4：真实杜鹃花瓣、实例 Morph 与无限绽放',
     }[activeId];
   }
 
@@ -166,14 +193,16 @@ export function createSceneSwitcher(gui, {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '三个场景共用开发服务器、Canvas、HDRI 和指针视差；场景1/2继续共用原梦境背景，场景3使用独立可调夜空。几何、动画和后处理互不进入对方管线，切换时分别保留三套相机角度。';
+  note.textContent = '四个场景共用开发服务器、Canvas、HDRI 和指针视差；场景1/2继续共用原梦境背景，场景3使用独立夜空，场景4使用独立动态花园背景。几何与动画互不进入对方管线，切换时分别保留四套相机角度。';
   folder.$children.appendChild(note);
 
   specimenScene.visible = true;
   pollenScene.visible = false;
   fireworkScene.visible = false;
+  flowerScene.visible = false;
   pollen.deactivate();
   firework.deactivate();
+  flower.deactivate();
   refreshFolders();
 
   return {
@@ -185,16 +214,19 @@ export function createSceneSwitcher(gui, {
     pauseClock() {
       if (activeId === 'pollen') pollen.pauseClock();
       if (activeId === 'firework') firework.pauseClock();
+      if (activeId === 'flower') flower.pauseClock();
     },
     setReducedMotion(value) {
       pollen.setReducedMotion(value);
       firework.setReducedMotion(value);
+      flower.setReducedMotion(value);
     },
     dispose() {
       if (disposed) return;
       disposed = true;
       pollen.deactivate();
       firework.deactivate();
+      flower.deactivate();
     },
   };
 }

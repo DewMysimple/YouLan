@@ -21,6 +21,7 @@ import { createPollenScene, bindPollenPanel } from './pollenScene.js';
 import { createFireworkScene, bindFireworkPanel } from './fireworkScene.js';
 import { createFireworkPost } from './fireworkPost.js';
 import { createSceneSwitcher } from './sceneSwitcher.js';
+import { createInfiniteBloomScene, bindInfiniteBloomPanel } from './infiniteBloomScene.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 
@@ -264,6 +265,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let pollen = null;
   let firework = null;
   let fireworkPost = null;
+  let flower = null;
   let sceneSwitcher = null;
   let disposePollenBackdrop = null;
 
@@ -283,6 +285,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
   const fireworkScene = new THREE.Scene();
   fireworkScene.name = '场景3·金菊闪柳烟花';
   fireworkScene.background = new THREE.Color('#000000');
+  const flowerScene = new THREE.Scene();
+  flowerScene.name = '场景4·无限花开';
+  flowerScene.background = new THREE.Color('#080914');
   const camera = new THREE.PerspectiveCamera(
     40,
     Math.max(container.clientWidth, 1) / Math.max(container.clientHeight, 1),
@@ -310,6 +315,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         let atmosphereAnimated = false;
         let pollenAnimated = false;
         let fireworkAnimated = false;
+        let flowerAnimated = false;
         try {
           if (activeSceneId === 'specimen') {
             atmosphereAnimated = atmosphere.update(timestamp, !document.hidden);
@@ -322,14 +328,17 @@ export function createSpecimenViewer(container, { onError } = {}) {
             atmosphereAnimated = atmosphere.updateBackground(timestamp, !document.hidden);
             pollenAnimated = pollen?.update(timestamp, !document.hidden) ?? false;
             atmosphere.renderWithBackground(() => renderer.render(pollenScene, camera), pollenScene);
-          } else {
+          } else if (activeSceneId === 'firework') {
             fireworkAnimated = firework?.update(timestamp, !document.hidden) ?? false;
             fireworkPost?.render();
+          } else {
+            flowerAnimated = flower?.update(timestamp, !document.hidden) ?? false;
+            renderer.render(flowerScene, camera);
           }
         } finally {
           pointerParallax?.restoreCamera();
         }
-        if (atmosphereAnimated || pollenAnimated || fireworkAnimated || parallaxAnimated) requestRender();
+        if (atmosphereAnimated || pollenAnimated || fireworkAnimated || flowerAnimated || parallaxAnimated) requestRender();
       }
     });
   };
@@ -340,6 +349,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
     reducedMotion: motionPreference.matches,
   });
   firework = createFireworkScene(fireworkScene, renderer, requestRender, {
+    reducedMotion: motionPreference.matches,
+  });
+  flower = createInfiniteBloomScene(flowerScene, renderer, requestRender, {
     reducedMotion: motionPreference.matches,
   });
   fireworkPost = createFireworkPost(
@@ -360,6 +372,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     pointerParallax.pauseClock();
     pollen.pauseClock();
     firework.pauseClock();
+    flower.pauseClock();
     sceneSwitcher?.pauseClock();
     if (document.hidden) pointerParallax.resetInput({ immediate: true });
     if (document.hidden && renderFrame) { window.cancelAnimationFrame(renderFrame); renderFrame = 0; }
@@ -376,7 +389,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   motionPreference.addEventListener('change', motionChange);
 
   controls.addEventListener('change', requestRender);
-  const environment = createEnvironmentManager([scene, pollenScene, fireworkScene], requestRender, {
+  const environment = createEnvironmentManager([scene, pollenScene, fireworkScene, flowerScene], requestRender, {
     maxTextureSize: renderer.capabilities.maxTextureSize,
   });
   gui = new GUI({ title: '场景参数', width: 310 });
@@ -514,6 +527,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     refreshAtmospherePanel = bindAtmospherePanel(gui, atmosphere, requestRender);
     const pollenFolder = bindPollenPanel(gui, pollen, requestRender);
     const fireworkFolder = bindFireworkPanel(gui, firework, requestRender);
+    const flowerFolder = bindInfiniteBloomPanel(gui, flower, requestRender);
     const specimenFolders = ['深邃效果', '外框插槽管理', '内框插槽管理', '渲染设置']
       .map((title) => gui.folders.find((folder) => folder._title === title));
     sceneSwitcher = createSceneSwitcher(gui, {
@@ -526,9 +540,12 @@ export function createSpecimenViewer(container, { onError } = {}) {
       pollen,
       fireworkScene,
       firework,
+      flowerScene,
+      flower,
       specimenFolders,
       pollenFolders: [pollenFolder],
       fireworkFolders: [fireworkFolder],
+      flowerFolders: [flowerFolder],
     });
     organizeViewerPanel(gui);
     gui.folders.filter(folder => !['场景选择', '深邃效果'].includes(folder._title)).forEach(folder => folder.close());
@@ -569,6 +586,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     pollen.dispose();
     fireworkPost?.dispose();
     firework.dispose();
+    flower.dispose();
     softEdges?.dispose();
     embeddedCore?.dispose();
     slices.dispose();

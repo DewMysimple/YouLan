@@ -19,6 +19,7 @@ supersedes: null
 | 2026-09-04 | feature | - | archived | infinite-sun-depth-panel | [[日志/2026-09-04-统一纵深面板并增加无限远太阳.md|统一纵深面板并增加无限远太阳]] |
 | 2026-09-04 | bug | - | archived | pointer-camera-parallax | [[日志/2026-09-04-深度修复指针视差与轨道交接.md|2026-09-04｜深度修复指针视差与轨道交接]] |
 | 2026-09-04 | feature | - | archived | isolated-pollen-scene | [[日志/2026-09-04-实现隔离花粉星云场景.md|2026-09-04｜实现隔离花粉星云场景]] |
+| 2026-09-04 | feature | - | archived | isolated-azalea-infinite-bloom | [[日志/2026-09-04-实现隔离杜鹃花无限绽放场景.md|2026-09-04｜实现隔离杜鹃花无限绽放场景]] |
 | 2026-09-04 | feature | - | archived | isolated-firework-scene | [[日志/2026-09-04-分析参考视频并实现隔离金菊闪柳场景.md|2026-09-04｜分析参考视频并实现隔离金菊闪柳场景]] |
 | 2026-09-04 | feature | - | archived | pointer-camera-parallax | [[日志/2026-09-04-分析参考视频并实现指针相机视差.md|2026-09-04｜分析参考视频并实现指针相机视差]] |
 | 2026-09-04 | bug | - | archived | sun-viewport-ray-visibility | [[日志/2026-09-04-修正太阳出画后才隐藏光束.md|修正太阳出画后才隐藏光束]] |
