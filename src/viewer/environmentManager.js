@@ -70,9 +70,13 @@ function whiteEnvironment() {
   return texture;
 }
 
-export function createEnvironmentManager(scene, requestRender, {
+export function createEnvironmentManager(sceneOrScenes, requestRender, {
   decode = decodeEnvironment, maxTextureSize = Infinity,
 } = {}) {
+  const scenes = Array.isArray(sceneOrScenes) ? sceneOrScenes : [sceneOrScenes];
+  if (!scenes.length || scenes.some((scene) => !scene?.isScene)) {
+    throw new Error('环境管理器需要至少一个 Three.js Scene。');
+  }
   const white = whiteEnvironment();
   const background = new THREE.Color('#ffffff');
   const parameters = { intensity: 1, showBackground: true, brightness: 1, blur: 0, rotation: 0 };
@@ -88,18 +92,20 @@ export function createEnvironmentManager(scene, requestRender, {
   function apply() {
     if (disposed) return;
     const texture = image ?? white;
-    scene.environment = texture;
-    scene.background = image && parameters.showBackground ? image : background;
-    scene.backgroundIntensity = parameters.brightness;
-    scene.backgroundBlurriness = parameters.blur;
-    scene.backgroundRotation.set(0, THREE.MathUtils.degToRad(parameters.rotation), 0);
-    scene.environmentRotation.copy(scene.backgroundRotation);
+    for (const scene of scenes) {
+      scene.environment = texture;
+      scene.background = image && parameters.showBackground ? image : background;
+      scene.backgroundIntensity = parameters.brightness;
+      scene.backgroundBlurriness = parameters.blur;
+      scene.backgroundRotation.set(0, THREE.MathUtils.degToRad(parameters.rotation), 0);
+      scene.environmentRotation.copy(scene.backgroundRotation);
+    }
     for (const { material, parameters: slot } of materials) {
       if (material.envMap !== texture) {
         material.envMap = texture;
         material.needsUpdate = true;
       }
-      material.envMapRotation.copy(scene.environmentRotation);
+      material.envMapRotation.copy(scenes[0].environmentRotation);
       material.envMapIntensity = parameters.intensity * slot.envMapIntensity;
     }
     requestRender();
@@ -168,7 +174,7 @@ export function createEnvironmentManager(scene, requestRender, {
       if (disposed) return;
       disposed = true; generation++;
       abort?.abort();
-      scene.background = null; scene.environment = null;
+      scenes.forEach((scene) => { scene.background = null; scene.environment = null; });
       for (const { material } of materials) material.envMap = null;
       materials = []; image?.dispose(); white.dispose(); listeners.clear();
     },

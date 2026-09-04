@@ -13,8 +13,10 @@ const file = (name) => ({ name, arrayBuffer: async () => name });
 
 test('white default, per-slot intensity product, background-only hiding and rotation', async () => {
   const scene = new THREE.Scene();
-  const manager = createEnvironmentManager(scene, () => {}, { decode: async () => texture() });
+  const secondScene = new THREE.Scene();
+  const manager = createEnvironmentManager([scene, secondScene], () => {}, { decode: async () => texture() });
   assert.equal(scene.background.getHexString(), 'ffffff');
+  assert.equal(secondScene.background.getHexString(), 'ffffff');
   const slots = [0.4, 0.8].map((envMapIntensity) => ({ material: new THREE.MeshPhysicalMaterial(), parameters: { envMapIntensity } }));
   manager.setMaterials(slots);
   manager.parameters.intensity = 2; manager.parameters.rotation = 90; manager.apply();
@@ -22,6 +24,8 @@ test('white default, per-slot intensity product, background-only hiding and rota
   await manager.loadFile(file('test.hdr'));
   const image = scene.environment;
   assert.equal(scene.background, image);
+  assert.equal(secondScene.environment, image);
+  assert.equal(secondScene.background, image);
   manager.parameters.showBackground = false; manager.apply();
   assert.equal(scene.background.getHexString(), 'ffffff');
   assert.equal(scene.environment, image);
@@ -30,6 +34,7 @@ test('white default, per-slot intensity product, background-only hiding and rota
   assert.equal(scene.background.getHexString(), 'ffffff');
   manager.dispose(); manager.dispose();
   assert.equal(scene.environment, null);
+  assert.equal(secondScene.environment, null);
 });
 
 test('replacement failure and oversized images preserve active image', async () => {

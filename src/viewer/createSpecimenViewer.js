@@ -17,6 +17,8 @@ import { bindDepthPresentation, DEPTH_ENVIRONMENT } from './depthPresentation.js
 import { createDreamAtmosphere, bindAtmospherePanel } from './dreamAtmosphere.js';
 import { createTransparentOrdering } from './transparentOrdering.js';
 import { createPointerParallax, bindPointerParallaxPanel } from './pointerParallax.js';
+import { createPollenScene, bindPollenPanel } from './pollenScene.js';
+import { createSceneSwitcher } from './sceneSwitcher.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 
@@ -257,6 +259,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let transparentOrdering = null;
   let refreshAtmospherePanel = null;
   let pointerParallax = null;
+  let pollen = null;
+  let sceneSwitcher = null;
+  let disposePollenBackdrop = null;
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
@@ -266,7 +271,11 @@ export function createSpecimenViewer(container, { onError } = {}) {
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
+  scene.name = '场景1·标本纵深';
   scene.background = new THREE.Color('#ffffff');
+  const pollenScene = new THREE.Scene();
+  pollenScene.name = '场景2·花粉星云';
+  pollenScene.background = new THREE.Color('#ffffff');
   const camera = new THREE.PerspectiveCamera(
     40,
     Math.max(container.clientWidth, 1) / Math.max(container.clientHeight, 1),
@@ -287,30 +296,44 @@ export function createSpecimenViewer(container, { onError } = {}) {
     renderFrame = window.requestAnimationFrame((timestamp) => {
       renderFrame = 0;
       if (!disposed) {
-        depthStack?.flush();
+        const activeSceneId = sceneSwitcher?.activeId ?? 'specimen';
+        if (activeSceneId === 'specimen') depthStack?.flush();
         const parallaxAnimated = pointerParallax?.update(timestamp) ?? false;
         pointerParallax?.apply();
         let atmosphereAnimated = false;
+        let pollenAnimated = false;
         try {
-          depthStack?.updateCameraClip(camera);
-          embeddedCore?.update();
-          softEdges?.update();
-          transparentOrdering?.update(camera);
-          atmosphereAnimated = atmosphere.update(timestamp, !document.hidden);
-          atmosphere.renderWithBackground(() => bloom.render(scene, camera));
+          if (activeSceneId === 'specimen') {
+            atmosphereAnimated = atmosphere.update(timestamp, !document.hidden);
+            depthStack?.updateCameraClip(camera);
+            embeddedCore?.update();
+            softEdges?.update();
+            transparentOrdering?.update(camera);
+            atmosphere.renderWithBackground(() => bloom.render(scene, camera), scene);
+          } else {
+            atmosphereAnimated = atmosphere.updateBackground(timestamp, !document.hidden);
+            pollenAnimated = pollen?.update(timestamp, !document.hidden) ?? false;
+            atmosphere.renderWithBackground(() => renderer.render(pollenScene, camera), pollenScene);
+          }
         } finally {
           pointerParallax?.restoreCamera();
         }
-        if (atmosphereAnimated || parallaxAnimated) requestRender();
+        if (atmosphereAnimated || pollenAnimated || parallaxAnimated) requestRender();
       }
     });
   };
   pointerParallax = createPointerParallax(camera, controls, renderer.domElement, requestRender, {
     reducedMotion: motionPreference.matches,
   });
+  pollen = createPollenScene(pollenScene, renderer, requestRender, {
+    reducedMotion: motionPreference.matches,
+  });
+  disposePollenBackdrop = atmosphere.createSharedBackdrop(pollenScene);
   const visibilityChange = () => {
     atmosphere.pauseClock();
     pointerParallax.pauseClock();
+    pollen.pauseClock();
+    sceneSwitcher?.pauseClock();
     if (document.hidden) pointerParallax.resetInput({ immediate: true });
     if (document.hidden && renderFrame) { window.cancelAnimationFrame(renderFrame); renderFrame = 0; }
     if (!document.hidden) requestRender();
@@ -318,6 +341,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   const motionChange = () => {
     atmosphere.setReducedMotion(motionPreference.matches);
     pointerParallax.setReducedMotion(motionPreference.matches);
+    sceneSwitcher?.setReducedMotion(motionPreference.matches);
     gui?.controllersRecursive().forEach(c => c.updateDisplay());
     requestRender();
   };
@@ -325,7 +349,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   motionPreference.addEventListener('change', motionChange);
 
   controls.addEventListener('change', requestRender);
-  const environment = createEnvironmentManager(scene, requestRender, {
+  const environment = createEnvironmentManager([scene, pollenScene], requestRender, {
     maxTextureSize: renderer.capabilities.maxTextureSize,
   });
   gui = new GUI({ title: '场景参数', width: 310 });
@@ -460,8 +484,22 @@ export function createSpecimenViewer(container, { onError } = {}) {
       slots: [{ material: outerMaterial, parameters: outerParameters }, { material: innerMaterial, parameters: innerParameters }],
       slices, bloom, embeddedCore, softEdges, atmosphere, parallax: pointerParallax, emission: localEmission, environment, renderer, renderParameters, requestRender });
     refreshAtmospherePanel = bindAtmospherePanel(gui, atmosphere, requestRender);
+    const pollenFolder = bindPollenPanel(gui, pollen, requestRender);
+    const specimenFolders = ['深邃效果', '外框插槽管理', '内框插槽管理', '渲染设置']
+      .map((title) => gui.folders.find((folder) => folder._title === title));
+    sceneSwitcher = createSceneSwitcher(gui, {
+      camera,
+      controls,
+      parallax: pointerParallax,
+      requestRender,
+      specimenScene: scene,
+      pollenScene,
+      pollen,
+      specimenFolders,
+      pollenFolders: [pollenFolder],
+    });
     organizeViewerPanel(gui);
-    gui.folders.filter(folder => folder._title !== '深邃效果').forEach(folder => folder.close());
+    gui.folders.filter(folder => !['场景选择', '深邃效果'].includes(folder._title)).forEach(folder => folder.close());
     requestRender();
   };
 
@@ -489,11 +527,14 @@ export function createSpecimenViewer(container, { onError } = {}) {
     controls.removeEventListener('change', requestRender);
     controls.dispose();
     pointerParallax.dispose();
+    sceneSwitcher?.dispose();
     depthStack?.dispose();
     disposeEnvironmentPanel?.();
     bloom.dispose();
     transparentOrdering?.dispose();
     atmosphere.dispose();
+    disposePollenBackdrop?.();
+    pollen.dispose();
     softEdges?.dispose();
     embeddedCore?.dispose();
     slices.dispose();

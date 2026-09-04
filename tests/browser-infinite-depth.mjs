@@ -15,15 +15,17 @@ try {
   await b.set(A,'背景流动',false);await b.delay(1200);
   await b.evaluate(`window.sky=scene.getObjectByName('流动混色天空（独立环境）');window.sun=scene.getObjectByName('尽头亮心（独立亮源）');window.initialCamera=__camera.position.toArray();`);
   report.folders=await b.evaluate(`Array.from(document.querySelector('.lil-gui.root > .children').children).filter(e=>e.classList.contains('lil-gui')).map(e=>e.querySelector(':scope > .title').textContent)`);
-  assert.deepEqual(report.folders,['深邃效果','梦境背景与迎光','指针视差','HDRI 环境设置','外框插槽管理','内框插槽管理','渲染设置']);
+  assert.deepEqual(report.folders,['场景选择','深邃效果','场景2·花粉星云','梦境背景与迎光','指针视差','HDRI 环境设置','外框插槽管理','内框插槽管理','渲染设置']);
   assert.equal(await b.evaluate(`!!folder(['阵列修改器'])`),false);
   // Every existing non-array control remains reachable, with the same binding.
   const inventory={
+    '场景选择':['当前场景','重置当前场景视角'],
     '深邃效果':['纵深数量','纵深间距','首层取景视角（°）','首层正面取景','适配全部','恢复调好的默认效果','纯透射对照','仅颜色层级对照','局部 Bloom 光晕','光晕强度','光晕半径','光晕阈值'],
     '梦境背景与迎光':['启用梦境效果','背景模式','背景流动','流动速度','混色背景亮度','尽头亮心强度','亮心半径','亮心距末层','迎光放射强度','亮心柔晕','光束扩散范围','边缘渐隐范围（%）','显隐过渡时长（秒）','紫色层级保护','亮心距离模式'],
     '指针视差':['启用指针视差','视差幅度（°）','垂直响应比例','跟随缓动（秒）','操作后当前位置为中心','视差回中'],
     'HDRI 环境设置':['选择本地贴图','清除贴图','使用内置 HDRI','环境强度','显示贴图背景','背景亮度','背景模糊','水平旋转（°）'],
     '渲染设置':['内嵌色体透射','轮廓清晰度','轮廓宽度（像素）','切片颜色累积','累积强度','加深上限','HDRI 分级显色','曝光','透射分辨率比例'],
+    '场景2·花粉星云':['启用粒子场景','粒子流动','流动速度','漂浮强度','漩涡强度','整体尺寸','远层微尘数量','中层花粉数量','近层花瓣数量','微尘颜色','花粉颜色','花瓣颜色','粒子柔光','能量核心强度','能量核心大小','重置粒子场景'],
   };
   inventory['外框插槽管理']=inventory['内框插槽管理']=['颜色','自发光颜色','自发光强度','透射率','不透明度','写入深度（遮挡后层）','金属度','粗糙度','折射率（IOR）','厚度','镜面反射强度','镜面反射颜色','环境贴图强度','仅局部光纹发光'];
   for(const [name,labels] of Object.entries(inventory)) for(const label of labels)assert.equal(await b.evaluate(`!!controller([${JSON.stringify(name)}],${JSON.stringify(label)})`),true,`${name}/${label}`);

@@ -21,7 +21,7 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <div ref={viewerRef} className="viewer" aria-label="幽兰标本框三维模型" />
+      <div ref={viewerRef} className="viewer" aria-label="幽兰标本与花粉星云三维场景" />
       {errorMessage ? (
         <div className="error-message" role="alert">
           {errorMessage}

@@ -95,6 +95,8 @@ select {
 }
 
 .viewer-panel-status,
+.viewer-scene-status,
+.viewer-particle-status,
 .viewer-effect-note {
   padding: 6px 8px;
   line-height: 1.5;
@@ -102,6 +104,14 @@ select {
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
   text-wrap: pretty;
+}
+
+.viewer-scene-status {
+  color: #d8c6ff;
+}
+
+.viewer-particle-status {
+  color: #ffd1ef;
 }
 
 .viewer-panel-status[data-kind="error"] {

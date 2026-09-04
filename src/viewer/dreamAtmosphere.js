@@ -146,6 +146,10 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
       lavender: { value: new THREE.Color('#b787f5') } }, depthWrite: false, depthTest: false });
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), skyMaterial);
   sky.name = '流动混色天空（独立环境）'; sky.frustumCulled = false; sky.renderOrder = -10000;
+  // Additional content scenes reuse the exact procedural-background clock,
+  // palette and camera matrices, but own an independent mesh/material. This
+  // keeps scene-specific depth, transparency and glow resources isolated.
+  const sharedBackdrops = new Set();
   const sunMaterial = new THREE.MeshBasicMaterial({ color: '#fff2d8' });
   const distantSun = { value: true };
   // Keep finite coordinates and the native unlit color pipeline. At infinity
@@ -180,16 +184,22 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
   const solarQuad = new FullScreenQuad(solarEmission);
   sky.onBeforeRender = syncCounts;
 
-  function update(timestamp, visible = true) {
-    if (disposed) return;
+  function updateBackground(timestamp, visible = true) {
+    if (disposed) return false;
     const animate = parameters.enabled && parameters.background === '流动混色' && parameters.animated && parameters.speed > 0 && visible;
     if (animate && previousTime !== null) uniforms.dreamTime.value += Math.min((timestamp - previousTime) / 1000, .1) * parameters.speed;
     previousTime = animate ? timestamp : null;
+    sky.visible = parameters.enabled && parameters.background === '流动混色';
+    sharedBackdrops.forEach(({ mesh }) => { mesh.visible = sky.visible; });
+    skyMaterial.uniforms.brightness.value = parameters.backgroundStrength;
+    return animate;
+  }
+  function update(timestamp, visible = true) {
+    if (disposed) return false;
+    const animate = updateBackground(timestamp, visible);
     group.visible = parameters.enabled;
     if (parameters.enabled && !group.parent) scene.add(group);
     if (!parameters.enabled && group.parent) group.removeFromParent();
-    sky.visible = parameters.enabled && parameters.background === '流动混色';
-    skyMaterial.uniforms.brightness.value = parameters.backgroundStrength;
     sun.visible = parameters.enabled && parameters.sunIntensity > 0 && !!source;
     const infinite = parameters.sunMode === '无限远（太阳）';
     distantSun.value = infinite;
@@ -254,12 +264,38 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
       uniforms.dreamBlocking.value.setComponent(slot, -Math.log(Math.max(1 - weight * (1 - material.transmission), .000001)));
     });
   }
-  function renderWithBackground(render) {
-    const previous = scene.background;
-    if (parameters.enabled && parameters.background !== 'HDRI / 纯白') scene.background = parameters.background === '纯黑对照' ? black : null;
-    try { render(); } finally { scene.background = previous; }
+  function renderWithBackground(render, targetScene = scene) {
+    const previous = targetScene.background;
+    if (parameters.enabled && parameters.background !== 'HDRI / 纯白') targetScene.background = parameters.background === '纯黑对照' ? black : null;
+    try { render(); } finally { targetScene.background = previous; }
   }
-  return { parameters, uniforms, sun, group, update, syncCounts, renderWithBackground,
+  function createSharedBackdrop(targetScene) {
+    if (!targetScene?.isScene) throw new Error('共享背景需要有效的 Three.js Scene。');
+    const material = skyMaterial.clone();
+    // Share only backdrop inputs. Specimen coverage and solar visibility stay
+    // private to scene 1, so the particle scene can never sample stale slices.
+    for (const key of ['inverseProjection', 'cameraWorld', 'brightness', 'cream', 'pink', 'lavender', 'dreamTime', 'dreamAspect']) {
+      material.uniforms[key] = skyMaterial.uniforms[key];
+    }
+    material.uniforms.dreamActive.value = false;
+    material.uniforms.dreamHasCounts.value = false;
+    material.uniforms.dreamCounts.value = null;
+    material.uniforms.dreamGate.value = 0;
+    const mesh = new THREE.Mesh(sky.geometry, material);
+    mesh.name = '流动混色天空（共享背景）';
+    mesh.frustumCulled = false;
+    mesh.renderOrder = sky.renderOrder;
+    mesh.visible = sky.visible;
+    targetScene.add(mesh);
+    const entry = { mesh, material };
+    sharedBackdrops.add(entry);
+    return () => {
+      if (!sharedBackdrops.delete(entry)) return;
+      mesh.removeFromParent();
+      material.dispose();
+    };
+  }
+  return { parameters, uniforms, sun, group, update, updateBackground, syncCounts, renderWithBackground,
     get effectActive() { return parameters.enabled; },
     get sunBloomActive() { return parameters.enabled && parameters.sunIntensity > 0 && parameters.halo > 0 && uniforms.dreamGate.value > 0; },
     renderEmission(renderer) { if (parameters.enabled && parameters.halo > 0 && uniforms.dreamGate.value > 0) solarQuad.render(renderer); },
@@ -275,11 +311,14 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
         'gl_FragColor = texture2D(tDiffuse, vUv); gl_FragColor.rgb += dreamGlare(vUv);');
     },
     pauseClock() { previousTime = null; previousGateTime = null; },
+    createSharedBackdrop,
     onPanelRefresh(callback) { panelRefresh = callback; },
     setReducedMotion(value) { motionReduced = value; if (value) parameters.animated = false; panelRefresh(); },
     restore() { Object.assign(parameters, ATMOSPHERE_DEFAULTS, { animated: !motionReduced }); uniforms.dreamTime.value = 0;
       previousTime = null; previousGateTime = null; gateTarget = uniforms.dreamGate.value; gateSettled = true; panelRefresh(); },
     dispose() { if (disposed) return; disposed = true; slices.requireCounts(false); group.removeFromParent();
+      sharedBackdrops.forEach(({ mesh, material }) => { mesh.removeFromParent(); material.dispose(); });
+      sharedBackdrops.clear();
       sky.geometry.dispose(); skyMaterial.dispose(); sun.geometry.dispose(); sunMaterial.dispose();
       solarEmission.dispose(); solarQuad.dispose(); source = null; panelRefresh = () => {}; },
   };

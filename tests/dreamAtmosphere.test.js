@@ -50,6 +50,12 @@ test('atmosphere owns separate source, holds material colors, restores backgroun
   let counts=false;
   const slices={ requireCounts(v){counts=v;},optics(){return {texture:null};},parameters:{enabled:true,strength:.09,limit:3} };
   const a=createDreamAtmosphere(scene,camera,slices);
+  const secondScene=new THREE.Scene();
+  const releaseBackdrop=a.createSharedBackdrop(secondScene);
+  const sharedBackdrop=secondScene.getObjectByName('流动混色天空（共享背景）');
+  assert.ok(sharedBackdrop);
+  assert.equal(sharedBackdrop.material.uniforms.dreamHasCounts.value,false);
+  assert.equal(sharedBackdrop.material.uniforms.dreamTime,a.uniforms.dreamTime);
   a.parameters.transitionTime=0;
   a.parameters.sunMode='有限距离';
   const mesh=new THREE.Mesh(new THREE.BoxGeometry(9,9,.4),[new THREE.MeshPhysicalMaterial({color:'#f3faff'}),new THREE.MeshPhysicalMaterial({color:'#d1aaff'})]);
@@ -59,12 +65,15 @@ test('atmosphere owns separate source, holds material colors, restores backgroun
   assert.ok(a.sun.position.z < -20.2);const fixed=a.sun.position.toArray();
   camera.position.x=40; a.update(200); assert.deepEqual(a.sun.position.toArray(),fixed);
   a.parameters.animated=false;const time=a.uniforms.dreamTime.value;a.update(1000);assert.equal(a.uniforms.dreamTime.value,time);
+  a.parameters.animated=true;a.updateBackground(1100);a.updateBackground(1200);assert.ok(a.uniforms.dreamTime.value>time);
   const white=new THREE.Color('#ffffff');scene.background=white;
   assert.throws(()=>a.renderWithBackground(()=>{assert.equal(scene.background,null);throw Error('test');}));assert.equal(scene.background,white);
   a.parameters.background='纯黑对照';a.renderWithBackground(()=>assert.equal(scene.background.getHex(),0));assert.equal(scene.background,white);
+  secondScene.background=white;a.renderWithBackground(()=>assert.equal(secondScene.background.getHex(),0),secondScene);assert.equal(secondScene.background,white);
   assert.deepEqual(mesh.material.map(m=>m.color.getHexString()),before);
   a.setReducedMotion(true);a.restore();assert.equal(a.parameters.animated,false);
   a.parameters.enabled=false;a.update(2000);assert.equal(a.group.parent,null);assert.equal(counts,false);
+  releaseBackdrop();assert.equal(sharedBackdrop.parent,null);
   a.dispose();a.dispose();assert.equal(scene.children.length,1);mesh.geometry.dispose();mesh.material.forEach(m=>m.dispose());
 });
 
