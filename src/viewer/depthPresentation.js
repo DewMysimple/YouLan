@@ -28,7 +28,7 @@ export function frameFirstSlice(camera, controls, bounds, fov) {
   controls.update();
 }
 
-export function bindDepthPresentation(gui, { camera, controls, stack, fitAll, slots, slices, bloom, embeddedCore, softEdges, atmosphere, emission, environment, renderer, renderParameters, requestRender }) {
+export function bindDepthPresentation(gui, { camera, controls, stack, fitAll, slots, slices, bloom, embeddedCore, softEdges, atmosphere, parallax, emission, environment, renderer, renderParameters, requestRender }) {
   const folder = gui.addFolder('深邃效果');
   const parameters = { ...DEPTH_DEFAULTS };
   const originalColors = slots.map(({ parameters: slot }) => slot.color);
@@ -74,6 +74,7 @@ export function bindDepthPresentation(gui, { camera, controls, stack, fitAll, sl
       Object.assign(softEdges.parameters, EDGE_DEFAULTS);
       Object.assign(bloom.parameters, BLOOM_DEFAULTS);
       atmosphere?.restore();
+      parallax?.restoreDefaults();
       Object.assign(parameters, DEPTH_DEFAULTS);
       Object.assign(environment.parameters, DEPTH_ENVIRONMENT);
       environment.apply();

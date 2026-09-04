@@ -16,6 +16,7 @@ import { createSelectiveBloom } from './selectiveBloom.js';
 import { bindDepthPresentation, DEPTH_ENVIRONMENT } from './depthPresentation.js';
 import { createDreamAtmosphere, bindAtmospherePanel } from './dreamAtmosphere.js';
 import { createTransparentOrdering } from './transparentOrdering.js';
+import { createPointerParallax, bindPointerParallaxPanel } from './pointerParallax.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 
@@ -255,6 +256,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let softEdges = null;
   let transparentOrdering = null;
   let refreshAtmospherePanel = null;
+  let pointerParallax = null;
 
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(Math.max(container.clientWidth, 1), Math.max(container.clientHeight, 1));
@@ -286,23 +288,36 @@ export function createSpecimenViewer(container, { onError } = {}) {
       renderFrame = 0;
       if (!disposed) {
         depthStack?.flush();
-        depthStack?.updateCameraClip(camera);
-        embeddedCore?.update();
-        softEdges?.update();
-        transparentOrdering?.update(camera);
-        const animated = atmosphere.update(timestamp, !document.hidden);
-        atmosphere.renderWithBackground(() => bloom.render(scene, camera));
-        if (animated) requestRender();
+        const parallaxAnimated = pointerParallax?.update(timestamp) ?? false;
+        pointerParallax?.apply();
+        let atmosphereAnimated = false;
+        try {
+          depthStack?.updateCameraClip(camera);
+          embeddedCore?.update();
+          softEdges?.update();
+          transparentOrdering?.update(camera);
+          atmosphereAnimated = atmosphere.update(timestamp, !document.hidden);
+          atmosphere.renderWithBackground(() => bloom.render(scene, camera));
+        } finally {
+          pointerParallax?.restoreCamera();
+        }
+        if (atmosphereAnimated || parallaxAnimated) requestRender();
       }
     });
   };
+  pointerParallax = createPointerParallax(camera, controls, renderer.domElement, requestRender, {
+    reducedMotion: motionPreference.matches,
+  });
   const visibilityChange = () => {
     atmosphere.pauseClock();
+    pointerParallax.pauseClock();
+    if (document.hidden) pointerParallax.resetInput({ immediate: true });
     if (document.hidden && renderFrame) { window.cancelAnimationFrame(renderFrame); renderFrame = 0; }
     if (!document.hidden) requestRender();
   };
   const motionChange = () => {
     atmosphere.setReducedMotion(motionPreference.matches);
+    pointerParallax.setReducedMotion(motionPreference.matches);
     gui?.controllersRecursive().forEach(c => c.updateDisplay());
     requestRender();
   };
@@ -314,6 +329,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     maxTextureSize: renderer.capabilities.maxTextureSize,
   });
   gui = new GUI({ title: '场景参数', width: 310 });
+  bindPointerParallaxPanel(gui, pointerParallax, requestRender);
   disposeEnvironmentPanel = bindEnvironmentPanel(gui, environment, () => {
     atmosphere.parameters.background = 'HDRI / 纯白';
     gui.controllersRecursive().forEach(c => c.updateDisplay());
@@ -442,7 +458,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     bindDepthPresentation(gui, { camera, controls, stack: depthStack,
       fitAll: () => { depthStack.flush(); fitArray(camera, controls, loadedModel); requestRender(); },
       slots: [{ material: outerMaterial, parameters: outerParameters }, { material: innerMaterial, parameters: innerParameters }],
-      slices, bloom, embeddedCore, softEdges, atmosphere, emission: localEmission, environment, renderer, renderParameters, requestRender });
+      slices, bloom, embeddedCore, softEdges, atmosphere, parallax: pointerParallax, emission: localEmission, environment, renderer, renderParameters, requestRender });
     refreshAtmospherePanel = bindAtmospherePanel(gui, atmosphere, requestRender);
     organizeViewerPanel(gui);
     gui.folders.filter(folder => folder._title !== '深邃效果').forEach(folder => folder.close());
@@ -472,6 +488,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     motionPreference.removeEventListener('change', motionChange);
     controls.removeEventListener('change', requestRender);
     controls.dispose();
+    pointerParallax.dispose();
     depthStack?.dispose();
     disposeEnvironmentPanel?.();
     bloom.dispose();
