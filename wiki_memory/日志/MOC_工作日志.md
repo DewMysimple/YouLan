@@ -3,7 +3,7 @@ type: moc
 status: active
 kind: process
 importance: high
-updated: 2026-09-04
+updated: 2026-09-05
 topic: work-log-index
 source_logs: []
 supersedes: null
@@ -15,6 +15,7 @@ supersedes: null
 
 | 时间 | 类型 | 目标 | 状态 | 主题 | 日志 |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-05 | feature | - | archived | rebuild-independent-petal-bloom-and-flight | [[日志/2026-09-05-按参考工程重构逐瓣绽放与脱落飘散.md|2026-09-05｜按参考工程重构逐瓣绽放与脱落飘散]] |
 | 2026-09-04 | discussion | - | archived | retain-hdri-after-removal-audit | [[日志/2026-09-04-评估HDRI移除并决定保留.md|2026-09-04｜评估 HDRI 移除并决定保留]] |
 | 2026-09-04 | feature | - | archived | infinite-sun-depth-panel | [[日志/2026-09-04-统一纵深面板并增加无限远太阳.md|统一纵深面板并增加无限远太阳]] |
 | 2026-09-04 | bug | - | archived | pointer-camera-parallax | [[日志/2026-09-04-深度修复指针视差与轨道交接.md|2026-09-04｜深度修复指针视差与轨道交接]] |

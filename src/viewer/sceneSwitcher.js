@@ -89,9 +89,9 @@ export function createSceneSwitcher(gui, {
   scratch.lookAt(initialFirework.target);
   initialFirework.quaternion.copy(scratch.quaternion);
   const initialFlower = {
-    position: new THREE.Vector3(0, .45, 13.5),
+    position: new THREE.Vector3(3.6, 2.4, 15.5),
     quaternion: new THREE.Quaternion(),
-    target: new THREE.Vector3(0, -.25, 0),
+    target: new THREE.Vector3(.9, -.55, 0),
     fov: 38,
     near: .05,
     far: 220,
@@ -159,7 +159,7 @@ export function createSceneSwitcher(gui, {
       specimen: '已隔离激活场景1：标本透明、纵深、太阳与 Bloom',
       pollen: '已隔离激活场景2：三层花粉粒子与中央能量核心',
       firework: '已隔离激活场景3：金菊主枝、冷绿闪烁簇与柳尾 Bloom',
-      flower: '已隔离激活场景4：真实杜鹃花瓣、实例 Morph 与无限绽放',
+      flower: '已隔离激活场景4：逐片展开、外瓣脱落与风中飘散',
     }[activeId];
   }
 

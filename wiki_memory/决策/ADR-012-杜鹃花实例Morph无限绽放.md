@@ -1,6 +1,6 @@
 ---
 type: decision
-status: active
+status: superseded
 kind: architecture
 importance: high
 updated: 2026-09-04
@@ -11,6 +11,8 @@ supersedes: null
 ---
 
 # ADR-012｜杜鹃花实例 Morph 无限绽放
+
+本方案的整花冠实例与缩小退场机制已由 [[决策/ADR-013-无限花开按花瓣年龄展开与脱落|ADR-013]] 替代；以下保留历史约定。
 
 ## 用户指定方向
 

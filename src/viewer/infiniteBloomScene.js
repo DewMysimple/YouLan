@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MAX_BLOOM_LAYERS, PETAL_POOL_SIZE, samplePetals, splitPetalGeometry, installPetalDeformation } from './bloomPetals.js';
 
 
 const ASSET_URL = '/models/azalea-bloom.glb';
 const SUBSURFACE_URL = '/models/azalea-subsurface.png';
-const MAX_GENERATIONS = 12;
+const MAX_GENERATIONS = MAX_BLOOM_LAYERS;
 
 export const INFINITE_BLOOM_DEFAULTS = Object.freeze({
   enabled: true,
@@ -12,23 +13,25 @@ export const INFINITE_BLOOM_DEFAULTS = Object.freeze({
   loop: true,
   speed: 1,
   timeline: 0,
-  cycleDuration: 8,
-  generations: 8,
-  openDuration: 0.48,
-  holdDuration: 0.28,
-  goldenAngle: 137.5,
+  cycleDuration: 10,
+  generations: 7,
+  openDuration: 0.86,
+  holdDuration: 0.18,
+  fallDuration: 4.8,
+  wind: 1.2,
+  gravity: 1.05,
+  goldenAngle: 32,
   flowerScale: 1,
-  depthSpacing: 0.16,
-  breathing: 0.08,
-  breeze: 0.12,
-  showBranch: true,
+  depthSpacing: 0.22,
+  breeze: 0.22,
+  showBranch: false,
   petalTint: '#fff7f4',
-  roughness: 0.78,
-  normalStrength: 1,
+  roughness: 0.9,
+  normalStrength: .55,
   subsurfaceStrength: 0.72,
   subsurfaceColor: '#ff7f72',
   environmentIntensity: 1.3,
-  keyLight: 5.2,
+  keyLight: 3.4,
   rimLight: 1.65,
   backgroundFlow: true,
   backgroundSpeed: 0.12,
@@ -44,31 +47,6 @@ export const INFINITE_BLOOM_LIMITS = Object.freeze({
 
 function clamp01(value) {
   return Math.min(Math.max(value, 0), 1);
-}
-
-export function smootherstep(edge0, edge1, value) {
-  if (edge0 === edge1) return value < edge0 ? 0 : 1;
-  const amount = clamp01((value - edge0) / (edge1 - edge0));
-  return amount * amount * amount * (amount * (amount * 6 - 15) + 10);
-}
-
-export function bloomPhase(time, generation, generationCount, duration) {
-  const count = Math.max(Math.round(generationCount), 1);
-  const safeDuration = Math.max(duration, .001);
-  const offset = generation / count;
-  return ((time / safeDuration + offset) % 1 + 1) % 1;
-}
-
-export function bloomOpenProgress(phase, openDuration) {
-  return smootherstep(.025, Math.max(openDuration, .08), phase);
-}
-
-export function bloomEnvelope(phase, openDuration, holdDuration) {
-  const appearEnd = Math.min(Math.max(openDuration * .28, .06), .2);
-  const disappearStart = Math.min(Math.max(openDuration + holdDuration, .55), .94);
-  const appear = smootherstep(0, appearEnd, phase);
-  const disappear = 1 - smootherstep(disappearStart, 1, phase);
-  return appear * disappear;
 }
 
 function seededRandom(seed) {
@@ -183,8 +161,9 @@ function createDust() {
   return { points, geometry, material };
 }
 
-function installSubsurface(material, uniforms) {
+function installSubsurface(material, uniforms, deform = false) {
   material.onBeforeCompile = (shader) => {
+    if (deform) installPetalDeformation(shader);
     shader.uniforms.azaleaSubsurfaceMap = uniforms.map;
     shader.uniforms.azaleaSubsurfaceStrength = uniforms.strength;
     shader.uniforms.azaleaSubsurfaceColor = uniforms.color;
@@ -204,7 +183,7 @@ function installSubsurface(material, uniforms) {
          * azaleaSubsurfaceStrength * (0.42 + azaleaRim * 1.08);`,
     );
   };
-  material.customProgramCacheKey = () => 'azalea-subsurface-v1';
+  material.customProgramCacheKey = () => deform ? 'azalea-petal-curl-v2' : 'azalea-subsurface-v1';
 }
 
 function findMesh(root, name) {
@@ -227,7 +206,7 @@ function disposeMaterialTextures(materials) {
 export function createInfiniteBloomScene(scene, renderer, requestRender, {
   reducedMotion = false,
 } = {}) {
-  const parameters = { ...INFINITE_BLOOM_DEFAULTS, playing: !reducedMotion };
+  const parameters = { ...INFINITE_BLOOM_DEFAULTS, playing: !reducedMotion, backgroundFlow: !reducedMotion };
   const root = new THREE.Group();
   root.name = '场景4·无限花开根节点';
   root.position.set(0, .25, 0);
@@ -249,9 +228,9 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
   let previousTimestamp = null;
   let elapsed = 0;
   let previousPanelTick = -1;
-  let instancedBloom = null;
   let branch = null;
-  let morphDriver = null;
+  const petalBatches = [];
+  let sourceGeometry = null;
   let petalMaterial = null;
   let branchMaterial = null;
   let subsurfaceTexture = null;
@@ -266,6 +245,14 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
   };
   const matrixObject = new THREE.Object3D();
   const color = new THREE.Color();
+  const turn = new THREE.Quaternion();
+  const tilt = new THREE.Quaternion();
+  const tumble = new THREE.Quaternion();
+  const axisZ = new THREE.Vector3(0, 0, 1);
+  const axisX = new THREE.Vector3(1, 0, 0);
+  const flightEuler = new THREE.Euler();
+  const center = new THREE.Vector3();
+  const pivot = new THREE.Vector3();
 
   function applyMaterialParameters() {
     if (!petalMaterial || !branchMaterial) return;
@@ -273,8 +260,8 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     petalMaterial.roughness = parameters.roughness;
     petalMaterial.normalScale.setScalar(parameters.normalStrength);
     petalMaterial.envMapIntensity = parameters.environmentIntensity;
-    petalMaterial.specularIntensity = .34;
-    petalMaterial.clearcoat = .04;
+    petalMaterial.specularIntensity = .22;
+    petalMaterial.clearcoat = 0;
     branchMaterial.roughness = Math.min(parameters.roughness + .08, 1);
     branchMaterial.normalScale.setScalar(parameters.normalStrength);
     branchMaterial.envMapIntensity = parameters.environmentIntensity;
@@ -285,46 +272,50 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
   }
 
   function updateInstances() {
-    if (!instancedBloom || !morphDriver) return;
-    const count = Math.min(Math.max(Math.round(parameters.generations), 1), MAX_GENERATIONS);
-    const golden = THREE.MathUtils.degToRad(parameters.goldenAngle);
-    const time = parameters.timeline * parameters.cycleDuration;
-    for (let index = 0; index < count; index++) {
-      const phase = bloomPhase(time, index, count, parameters.cycleDuration);
-      const open = bloomOpenProgress(phase, parameters.openDuration);
-      const envelope = bloomEnvelope(phase, parameters.openDuration, parameters.holdDuration);
-      const rotation = golden * index + open * .11;
-      const pulse = 1 + Math.sin((phase + index * .17) * Math.PI * 2) * parameters.breathing;
-      const scale = Math.max(.0001, parameters.flowerScale * envelope * pulse
-        * THREE.MathUtils.lerp(.56, 1.04, open));
-      const drift = parameters.breeze * open;
-      matrixObject.position.set(
-        Math.sin(rotation * .73) * drift,
-        Math.cos(rotation * .61) * drift * .62,
-        (phase - .5) * parameters.depthSpacing * count,
-      );
-      matrixObject.rotation.set(
-        Math.sin(rotation) * parameters.breeze * .035,
-        Math.cos(rotation * .8) * parameters.breeze * .035,
-        rotation,
-      );
-      matrixObject.scale.setScalar(scale);
+    if (!petalBatches.length) return;
+    const samples = samplePetals(elapsed, parameters);
+    const counts = [0, 0, 0, 0, 0];
+    for (const petal of samples) {
+      if (!petal.visible) continue;
+      const type = ((petal.id % 5) + 5) % 5;
+      const batch = petalBatches[type];
+      const slot = counts[type]++;
+      if (slot >= PETAL_POOL_SIZE) throw new Error('Petal pool capacity exceeded');
+      turn.setFromAxisAngle(axisZ, petal.angle);
+      tilt.setFromAxisAngle(axisX, petal.tilt);
+      matrixObject.quaternion.copy(turn).multiply(tilt);
+      matrixObject.position.set(-Math.sin(petal.angle) * petal.radius, Math.cos(petal.angle) * petal.radius, petal.z);
+      matrixObject.scale.setScalar(petal.scale);
+      if (petal.falling) {
+        // Rotate about the petal's center, not the flower attachment point.
+        pivot.set(0, 1.2, .1).multiplyScalar(petal.scale);
+        center.copy(pivot).applyQuaternion(matrixObject.quaternion).add(matrixObject.position);
+        flightEuler.set(petal.tumbleX, petal.tumbleY, petal.tumbleZ);
+        tumble.setFromEuler(flightEuler);
+        matrixObject.quaternion.premultiply(tumble);
+        matrixObject.position.copy(center).sub(pivot.applyQuaternion(matrixObject.quaternion));
+        matrixObject.position.x += petal.driftX;
+        matrixObject.position.y += petal.driftY;
+        matrixObject.position.z += petal.driftZ;
+      }
       matrixObject.updateMatrix();
-      instancedBloom.setMatrixAt(index, matrixObject.matrix);
-
-      morphDriver.morphTargetInfluences[0] = 1 - open;
-      instancedBloom.setMorphAt(index, morphDriver);
-      color.setHSL(.014 + index / count * .018, .42, .9 + open * .045);
-      instancedBloom.setColorAt(index, color);
+      batch.setMatrixAt(slot, matrixObject.matrix);
+      batch.geometry.attributes.petalBend.setX(slot, petal.bend);
+      batch.geometry.attributes.petalFade.setX(slot, petal.fade);
+      color.setHSL(.99, .07, .89 + petal.open * .09);
+      batch.setColorAt(slot, color);
     }
-    instancedBloom.instanceMatrix.needsUpdate = true;
-    if (instancedBloom.instanceColor) instancedBloom.instanceColor.needsUpdate = true;
-    if (instancedBloom.morphTexture) instancedBloom.morphTexture.needsUpdate = true;
-    // Keep the morph texture allocated for the maximum instance capacity.
-    // setMorphAt() sizes it from .count on first use, so shrinking .count before
-    // that allocation would make later GUI increases write past its buffer.
-    instancedBloom.count = count;
-    instancedBloom.computeBoundingSphere();
+    petalBatches.forEach((batch, i) => {
+      batch.count = counts[i];
+      batch.instanceMatrix.needsUpdate = true;
+      if (batch.instanceColor) batch.instanceColor.needsUpdate = true;
+      batch.geometry.attributes.petalBend.needsUpdate = true;
+      batch.geometry.attributes.petalFade.needsUpdate = true;
+    });
+    if (scene.userData.infiniteBloom?.ready) {
+      scene.userData.infiniteBloom.petals = samples;
+      scene.userData.infiniteBloom.elapsed = elapsed;
+    }
   }
 
   function apply() {
@@ -346,7 +337,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
   }
 
   function restore() {
-    Object.assign(parameters, INFINITE_BLOOM_DEFAULTS, { playing: !reducedMotion });
+    Object.assign(parameters, INFINITE_BLOOM_DEFAULTS, { playing: !reducedMotion, backgroundFlow: !reducedMotion });
     elapsed = 0;
     previousTimestamp = null;
     apply();
@@ -366,9 +357,6 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     }
     const bloomSource = findMesh(gltf.scene, 'AZALEA_BLOOM');
     const branchSource = findMesh(gltf.scene, 'AZALEA_BRANCH');
-    if (!bloomSource.geometry.morphAttributes.position?.length) {
-      throw new Error('杜鹃花花冠缺少 Closed Morph Target。');
-    }
 
     subsurfaceTexture = loadedSubsurface;
     subsurfaceTexture.name = '杜鹃花次表面遮罩';
@@ -389,23 +377,23 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     branchMaterial = branchSource.material.clone();
     branchMaterial.name = '场景4·杜鹃枝叶真实材质';
     branchMaterial.side = THREE.DoubleSide;
-    installSubsurface(petalMaterial, subsurfaceUniforms);
+    installSubsurface(petalMaterial, subsurfaceUniforms, true);
     installSubsurface(branchMaterial, subsurfaceUniforms);
 
-    instancedBloom = new THREE.InstancedMesh(
-      bloomSource.geometry,
-      petalMaterial,
-      MAX_GENERATIONS,
-    );
-    instancedBloom.name = '场景4·GPU实例花冠';
-    instancedBloom.frustumCulled = false;
-    morphDriver = new THREE.Mesh(bloomSource.geometry, petalMaterial);
-    morphDriver.morphTargetInfluences[0] = 1;
+    sourceGeometry = bloomSource.geometry;
+    splitPetalGeometry(sourceGeometry).forEach((geometry, index) => {
+      const batch = new THREE.InstancedMesh(geometry, petalMaterial, PETAL_POOL_SIZE);
+      batch.name = `场景4·独立花瓣批次${index + 1}`;
+      batch.frustumCulled = false;
+      batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      petalBatches.push(batch);
+      root.add(batch);
+    });
 
     branch = new THREE.Mesh(branchSource.geometry, branchMaterial);
     branch.name = '场景4·真实枝叶与花蕊';
     branch.frustumCulled = false;
-    root.add(branch, instancedBloom);
+    root.add(branch);
     modelResources = [bloomSource.material, branchSource.material];
 
     scene.userData.infiniteBloom = {
@@ -415,8 +403,8 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
       maximumGenerations: MAX_GENERATIONS,
       sourceVertices: bloomSource.geometry.attributes.position.count,
       branchVertices: branchSource.geometry.attributes.position.count,
-      morphTargets: bloomSource.geometry.morphAttributes.position.length,
-      instancedBloom,
+      deformation: 'per-petal-arc-bend',
+      petalBatches,
     };
     apply();
   }).catch((error) => {
@@ -436,13 +424,12 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
       const delta = Math.min(Math.max((timestamp - previousTimestamp) / 1000, 0), .1);
       if (animated) {
         elapsed += delta * parameters.speed;
-        if (parameters.loop) {
-          elapsed %= parameters.cycleDuration;
-        } else {
+        // Absolute time preserves birth identities and flights across cycles.
+        if (!parameters.loop) {
           elapsed = Math.min(elapsed, parameters.cycleDuration);
           if (elapsed >= parameters.cycleDuration) parameters.playing = false;
         }
-        parameters.timeline = elapsed / parameters.cycleDuration;
+        parameters.timeline = parameters.loop ? (elapsed / parameters.cycleDuration) % 1 : elapsed / parameters.cycleDuration;
         updateInstances();
         const panelTick = Math.floor(elapsed * 10);
         if (panelTick !== previousPanelTick) {
@@ -474,7 +461,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     root,
     ready,
     get loadError() { return loadError; },
-    get instancedBloom() { return instancedBloom; },
+    get petalBatches() { return petalBatches; },
     get branch() { return branch; },
     apply,
     restore,
@@ -511,8 +498,8 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
       ambient.removeFromParent(); key.removeFromParent(); rim.removeFromParent();
       backdrop.mesh.geometry.dispose(); backdrop.material.dispose();
       dust.geometry.dispose(); dust.material.dispose();
-      instancedBloom?.dispose();
-      instancedBloom?.geometry.dispose();
+      petalBatches.forEach(batch => { batch.dispose(); batch.geometry.dispose(); });
+      sourceGeometry?.dispose();
       branch?.geometry.dispose();
       disposeMaterialTextures([
         ...modelResources,
@@ -537,16 +524,18 @@ export function bindInfiniteBloomPanel(gui, flower, requestRender) {
   folder.add(parameters, 'speed', 0, 2, .01).name('绽放速度').onChange(update);
   const timelineController = folder.add(parameters, 'timeline', 0, 1, .001)
     .name('周期预览').onChange(value => flower.seek(value));
-  folder.add({ restart: () => flower.restart() }, 'restart').name('从花苞重新绽放');
-  folder.add(parameters, 'cycleDuration', 3, 18, .1).name('单次周期（秒）')
+  folder.add({ restart: () => flower.restart() }, 'restart').name('重新播放花开');
+  folder.add(parameters, 'cycleDuration', 3, 18, .1).name('花瓣在枝时长（秒）')
     .onChange(() => flower.seek(parameters.timeline));
-  folder.add(parameters, 'generations', 1, MAX_GENERATIONS, 1).name('叠加花冠代数').onChange(update);
-  folder.add(parameters, 'openDuration', .12, .72, .01).name('花瓣展开阶段').onChange(update);
-  folder.add(parameters, 'holdDuration', .05, .45, .01).name('盛放停留阶段').onChange(update);
-  folder.add(parameters, 'goldenAngle', 90, 180, .1).name('代际旋转角（°）').onChange(update);
+  folder.add(parameters, 'generations', 1, MAX_GENERATIONS, 1).name('生长花瓣层数').onChange(update);
+  folder.add(parameters, 'openDuration', .25, .95, .01).name('展开时长比例').onChange(update);
+  folder.add(parameters, 'holdDuration', .05, .45, .01).name('盛放停留比例').onChange(update);
+  folder.add(parameters, 'goldenAngle', 0, 180, .1).name('代际旋转角（°）').onChange(update);
   folder.add(parameters, 'flowerScale', .35, 2, .01).name('花冠整体尺寸').onChange(update);
   folder.add(parameters, 'depthSpacing', 0, .6, .01).name('代际纵深间距').onChange(update);
-  folder.add(parameters, 'breathing', 0, .2, .005).name('呼吸起伏').onChange(update);
+  folder.add(parameters, 'fallDuration', 2, 8, .1).name('飘落持续（秒）').onChange(update);
+  folder.add(parameters, 'wind', 0, 2.5, .01).name('向右风力').onChange(update);
+  folder.add(parameters, 'gravity', .1, 2, .01).name('下落重力').onChange(update);
   folder.add(parameters, 'breeze', 0, .5, .01).name('花瓣微风').onChange(update);
   folder.add(parameters, 'showBranch').name('显示原始枝叶').onChange(update);
   folder.addColor(parameters, 'petalTint').name('花瓣整体染色').onChange(update);
@@ -570,7 +559,7 @@ export function bindInfiniteBloomPanel(gui, flower, requestRender) {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '五片主花瓣来自杜鹃花高模，并保留原始 2K 颜色、法线、粗糙度和次表面贴图。运行时把完整花冠作为 InstancedMesh 复用，通过每实例 Morph Target 错相位循环；旧花冠在保持盛放形态时缩小退场，不播放倒放闭合。WebGPU 不是该机制的必要条件，因此场景4继续兼容当前 WebGL 渲染器。';
+  note.textContent = '新花瓣从花心卷曲长出，持续向外舒展；最老的外层花瓣逐片脱离，保持展开形态，随风向右下方翻转飘落。调整风力、重力和飘落时长可改变轨迹。';
   folder.$children.appendChild(note);
 
   function refresh() {
@@ -578,12 +567,12 @@ export function bindInfiniteBloomPanel(gui, flower, requestRender) {
     if (flower.loadError) {
       status.dataset.kind = 'error';
       status.textContent = `杜鹃花资产加载失败：${flower.loadError.message}`;
-    } else if (!flower.instancedBloom) {
+    } else if (!flower.petalBatches.length) {
       status.dataset.kind = 'loading';
       status.textContent = '正在加载杜鹃花高模与四通道纹理…';
     } else {
       status.dataset.kind = 'ready';
-      status.textContent = `${parameters.generations} 代花冠 / 5 片真实花瓣 / 1 个实例绘制批次\n周期 ${(parameters.timeline * parameters.cycleDuration).toFixed(2)} / ${parameters.cycleDuration.toFixed(1)} 秒`;
+      status.textContent = `${parameters.generations * 5} 片生长花瓣 · 外层逐片脱落\n花瓣年龄周期 ${(parameters.timeline * parameters.cycleDuration).toFixed(2)} / ${parameters.cycleDuration.toFixed(1)} 秒`;
     }
     folder.controllers.filter(controller => !['启用无限花开', '重置无限花开'].includes(controller._name))
       .forEach(controller => controller.enable(parameters.enabled));

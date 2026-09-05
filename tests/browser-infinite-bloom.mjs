@@ -8,112 +8,80 @@ if (!output) throw new Error('Provide output directory');
 await mkdir(output, { recursive: true });
 const b = await browserHarness(output);
 const selector = ['场景选择'];
-const flowerFolder = ['场景4·无限花开'];
+const panel = ['场景4·无限花开'];
 const report = {};
-
 try {
   await b.open({ dream: true });
   await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   const specimenCamera = await b.evaluate('__camera.position.toArray()');
   await b.set(selector, '当前场景', '场景4·无限花开');
-  await b.until(`__observed.some(object => object.isScene && object.name === '场景4·无限花开' && object.userData.infiniteBloom?.ready)`);
-  await b.evaluate(`
-    window.scene4 = __observed.findLast(object => object.isScene && object.name === '场景4·无限花开');
-    window.flowerBatch = scene4.userData.infiniteBloom.instancedBloom;
-    window.scene4Renders = 0;
-    scene4.onAfterRender = () => scene4Renders++;
-  `);
-  report.isolation = await b.evaluate(`({
-    scene1Visible: scene.visible,
-    scene4Visible: scene4.visible,
-    specimenInScene4: !!scene4.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS'),
-    flowerInScene1: !!scene.getObjectByName('场景4·GPU实例花冠'),
-    sameEnvironment: scene.environment === scene4.environment,
-    ownBackground: !!scene4.getObjectByName('场景4·独立深夜花园'),
-  })`);
-  assert.deepEqual(report.isolation, {
-    scene1Visible: false,
-    scene4Visible: true,
-    specimenInScene4: false,
-    flowerInScene1: false,
-    sameEnvironment: true,
-    ownBackground: true,
-  });
-  report.asset = await b.evaluate(`({
-    count: flowerBatch.count,
-    drawCalls: __renderer.info.render.calls,
-    morphTexture: !!flowerBatch.morphTexture,
-    vertexCount: flowerBatch.geometry.attributes.position.count,
-    morphTargets: flowerBatch.geometry.morphAttributes.position.length,
-    mapColorSpace: flowerBatch.material.map.colorSpace,
-    branch: !!scene4.getObjectByName('场景4·真实枝叶与花蕊'),
-    folderVisible: getComputedStyle(folder(['场景4·无限花开'])).display !== 'none',
-  })`);
-  assert.equal(report.asset.count, 8);
-  assert.equal(report.asset.morphTexture, true);
-  assert.ok(report.asset.vertexCount > 7500);
-  assert.equal(report.asset.morphTargets, 1);
-  assert.equal(report.asset.branch, true);
-  assert.equal(report.asset.folderVisible, true);
-
-  await b.set(flowerFolder, '播放绽放', false);
-  await b.set(flowerFolder, '背景缓慢流动', false);
-  await b.set(flowerFolder, '叠加花冠代数', 1);
-  await b.set(flowerFolder, '周期预览', .43);
-  await b.delay(180);
-  await b.screenshot('00-source-single-flower.png');
-  await b.set(flowerFolder, '叠加花冠代数', 8);
-  const samples = [
-    ['01-flower-bud.png', 0],
-    ['02-flower-opening.png', .17],
-    ['03-flower-full.png', .43],
-    ['04-flower-generations.png', .74],
-  ];
-  report.phasePixels = {};
-  for (const [name, timeline] of samples) {
-    await b.set(flowerFolder, '周期预览', timeline);
-    await b.delay(180);
-    report.phasePixels[name] = await b.screenshot(name, [[20, 20], [720, 480], [590, 460]]);
+  await b.until(`__observed.some(o => o.name === '场景4·无限花开' && o.userData.infiniteBloom?.ready)`);
+  await b.evaluate(`window.scene4=__observed.findLast(o=>o.name==='场景4·无限花开');window.batches=scene4.userData.infiniteBloom.petalBatches;window.scene4Renders=0;scene4.onAfterRender=()=>scene4Renders++`);
+  report.isolation = await b.evaluate(`({scene1Visible:scene.visible,scene4Visible:scene4.visible,sameEnvironment:scene.environment===scene4.environment,petalsInScene1:!!scene.getObjectByName(batches[0].name)})`);
+  assert.deepEqual(report.isolation,{scene1Visible:false,scene4Visible:true,sameEnvironment:true,petalsInScene1:false});
+  assert.equal(await b.evaluate('batches.length'),5);
+  assert.equal(await b.evaluate('batches.reduce((n,b)=>n+b.geometry.attributes.position.count,0)'),8084);
+  assert.ok(await b.evaluate(`batches.every(b=>b.material.map.colorSpace==='srgb'&&b.geometry.attributes.petalBend.isInstancedBufferAttribute)`));
+  await b.set(panel,'播放绽放',false);await b.set(panel,'背景缓慢流动',false);
+  await b.set(panel,'周期预览',0);
+  await b.delay(150);
+  const snapshots=[];
+  for(const [index,time] of [0,.2,.4,.6,.8,.999].entries()) {
+    await b.set(panel,'周期预览',time);await b.delay(100);
+    await b.evaluate(`document.querySelector('.lil-gui.root').style.display='none'`);
+    await b.screenshot(`flower-${index}.png`);
+    const state=await b.evaluate(`({time:scene4.userData.infiniteBloom.elapsed,growing:scene4.userData.infiniteBloom.petals.filter(p=>!p.falling).length,falling:scene4.userData.infiniteBloom.petals.filter(p=>p.falling).length,matrices:batches.map(b=>Array.from(b.instanceMatrix.array))})`);
+    assert.equal(state.growing,35);assert.ok(state.falling>8);
+    snapshots.push(state);
   }
-  const luminance = ([red, green, blue]) => red * .2126 + green * .7152 + blue * .0722;
-  assert.ok(luminance(report.phasePixels['03-flower-full.png'][0]) < 70, 'garden remains dark');
-  assert.ok(luminance(report.phasePixels['03-flower-full.png'][1]) > 20, 'flower remains visible');
-
-  const idleRenders = await b.evaluate('scene4Renders');
-  await b.delay(450);
-  assert.equal(await b.evaluate('scene4Renders'), idleRenders, 'paused scene4 returns to on-demand rendering');
-
-  await b.set(flowerFolder, '叠加花冠代数', 12);
-  assert.equal(await b.evaluate('flowerBatch.count'), 12);
-  await b.set(flowerFolder, '花瓣粗糙度', .34);
-  assert.ok(Math.abs(await b.evaluate('flowerBatch.material.roughness') - .34) < 1e-8);
-  await b.set(flowerFolder, '次表面透光强度', .62);
-  await b.set(flowerFolder, '显示原始枝叶', false);
-  assert.equal(await b.evaluate(`scene4.getObjectByName('场景4·真实枝叶与花蕊').visible`), false);
-
-  const scene4Camera = await b.evaluate('__camera.position.toArray()');
-  await b.set(selector, '当前场景', '场景1·标本纵深');
-  await b.delay(150);
-  const restoredSpecimenCamera = await b.evaluate('__camera.position.toArray()');
-  restoredSpecimenCamera.forEach((value, index) => assert.ok(Math.abs(value - specimenCamera[index]) < 1e-8));
-  await b.set(selector, '当前场景', '场景4·无限花开');
-  await b.delay(150);
-  const restoredScene4Camera = await b.evaluate('__camera.position.toArray()');
-  restoredScene4Camera.forEach((value, index) => assert.ok(Math.abs(value - scene4Camera[index]) < 1e-8));
-
-  await b.evaluate(`folder(['场景4·无限花开']).classList.remove('closed');controller(['场景4·无限花开'],'HDRI 质感强度').scrollIntoView({block:'center'});`);
-  await b.delay(150);
-  assert.ok(await b.evaluate(`(()=>{const r=controller(['场景4·无限花开'],'HDRI 质感强度').getBoundingClientRect();return r.top>=0&&r.bottom<=1000;})()`));
-  await b.screenshot('05-scene4-desktop-panel.png');
-  assert.equal(b.errors.length, 0, JSON.stringify(b.errors));
-  report.camera = { specimenCamera, restoredSpecimenCamera, scene4Camera, restoredScene4Camera };
-  report.result = 'passed';
-  await writeFile(join(output, 'scene4-report.json'), JSON.stringify(report, null, 2));
-  console.log(JSON.stringify(report));
-} catch (error) {
-  await b.screenshot('scene4-failure.png');
-  console.error(b.errors);
-  throw error;
-} finally {
-  b.close();
-}
+  assert.notDeepEqual(snapshots[0].matrices,snapshots[1].matrices,'actual renderer transforms must move');
+  // Track the rendered center of one detached petal (including its tumble),
+  // project with the real default camera, then seek two seconds later.
+  await b.evaluate(`window.projectPetal=async id=>{
+    const T=await import('/source/threejs-transmission/build/three.module.js');
+    const sample=scene4.userData.infiniteBloom.petals.find(p=>p.id===id);
+    const type=(id%5+5)%5;
+    const peers=scene4.userData.infiniteBloom.petals.filter(p=>p.visible&&(p.id%5+5)%5===type);
+    const batch=batches[type];const matrix=new T.Matrix4();batch.getMatrixAt(peers.findIndex(p=>p.id===id),matrix);
+    const k=sample.bend/2.5,a=1.2*k;
+    const center=new T.Vector3(0,Math.sin(a)/k-.1*Math.sin(a),(1-Math.cos(a))/k+.1*Math.cos(a));
+    center.applyMatrix4(matrix).applyMatrix4(batch.matrixWorld).project(__camera);
+    return {x:center.x,y:center.y,bend:sample.bend,scale:sample.scale};
+  }`);
+  await b.set(panel,'周期预览',.2);
+  const id=await b.evaluate('scene4.userData.infiniteBloom.petals.find(p=>p.falling&&p.fallTime>.3&&p.fallTime<1).id');
+  const start=await b.evaluate(`projectPetal(${id})`);
+  await b.set(panel,'周期预览',.4);await b.delay(100);
+  const end=await b.evaluate(`projectPetal(${id})`);
+  assert.ok(end.x>start.x+.12 && end.y<start.y-.10,'rendered detached petal must travel down-right');
+  assert.equal(start.scale,end.scale);assert.equal(start.bend,end.bend);
+  report.flight={id,start,end};
+  const idle=await b.evaluate('scene4Renders');await b.delay(400);
+  assert.equal(await b.evaluate('scene4Renders'),idle,'pause stops rendering');
+  for(const layers of [1,12,7]) {
+    await b.set(panel,'生长花瓣层数',layers);
+    assert.equal(await b.evaluate('scene4.userData.infiniteBloom.petals.filter(p=>!p.falling).length'),layers*5);
+  }
+  await b.set(panel,'花瓣在枝时长（秒）',3);await b.set(panel,'飘落持续（秒）',8);await b.set(panel,'生长花瓣层数',12);
+  assert.ok(await b.evaluate('batches.every(b=>b.count<=b.instanceMatrix.count)'));
+  await b.click(panel,'重置无限花开');await b.set(panel,'背景缓慢流动',false);await b.set(panel,'绽放速度',2);
+  const initial=await b.evaluate('scene4.userData.infiniteBloom.elapsed');
+  await b.delay(11500);
+  const advanced=await b.evaluate('scene4.userData.infiniteBloom.elapsed');
+  assert.ok(advanced-initial>20,'actual RAF must run across multiple age cycles');
+  await b.set(panel,'播放绽放',false);
+  report.continuousPlayback={initial,advanced,instances:await b.evaluate('batches.map(b=>b.count)')};
+  const camera4=await b.evaluate('__camera.position.toArray()');
+  await b.set(selector,'当前场景','场景1·标本纵深');await b.delay(150);
+  const restored=await b.evaluate('__camera.position.toArray()');
+  restored.forEach((v,i)=>assert.ok(Math.abs(v-specimenCamera[i])<1e-8));
+  const inactiveTime=await b.evaluate('scene4.userData.infiniteBloom.elapsed');await b.delay(200);
+  assert.equal(await b.evaluate('scene4.userData.infiniteBloom.elapsed'),inactiveTime);
+  await b.set(selector,'当前场景','场景4·无限花开');await b.delay(150);
+  assert.deepEqual(await b.evaluate('__camera.position.toArray()'),camera4);
+  await b.evaluate(`document.querySelector('.lil-gui.root').style.display='';folder(['场景4·无限花开']).classList.remove('closed');controller(['场景4·无限花开'],'向右风力').scrollIntoView({block:'center'})`);
+  await b.screenshot('flower-panel.png');
+  assert.equal(b.errors.length,0,JSON.stringify(b.errors));
+  report.result='passed';report.phaseCounts=snapshots.map(({time,growing,falling})=>({time,growing,falling}));
+  await writeFile(join(output,'scene4-report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+} catch(error) {await b.screenshot('scene4-failure.png');console.error(b.errors);throw error;}finally{b.close();}
