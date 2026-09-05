@@ -24,6 +24,7 @@ supersedes: null
 | 2026-09-05 | feature | - | archived | rebuild-independent-petal-bloom-and-flight | [[日志/2026-09-05-按参考工程重构逐瓣绽放与脱落飘散.md|2026-09-05｜按参考工程重构逐瓣绽放与脱落飘散]] |
 | 2026-09-05 | feature | 在控制面板开放流动混色的颜色等个性化参数，说明遮罩来源并开放相关控制。 | archived | flowing-background-personalization | [[日志/2026-09-05-开放流动混色配色与程序遮罩控制.md|2026-09-05｜开放流动混色配色与程序遮罩控制]] |
 | 2026-09-05 | feature | 用户指定建模一只蝴蝶，并在下一个场景展示翅膀扇动动画。 | archived | butterfly-model-wingbeat-scene | [[日志/2026-09-05-建模蝴蝶并新增扇翅动画场景.md|2026-09-05｜建模蝴蝶并新增扇翅动画场景]] |
+| 2026-09-05 | feature | 将用户指定的桌面 Character 工程接入幽兰，编号必须是场景11。 | archived | character-scene11-integration | [[日志/2026-09-05-将Character接入场景11.md|2026-09-05｜将Character接入场景11]] |
 | 2026-09-05 | feature | 正式展示星球场景前，画面只有一架纸飞机，相机跟随其飞行，再带出星球和机群。 | archived | paper-plane-camera-intro | [[日志/2026-09-05-增加纸飞机跟随入场镜头.md|2026-09-05｜增加纸飞机跟随入场镜头]] |
 | 2026-09-05 | bug | 用户从沿身体纵轴的端面视角指出扇翅时翅膀脱离身体，要求固定轴连接。 | archived | butterfly-embedded-fixed-wing-axis | [[日志/2026-09-05-修复蝶翼外置旋转轴导致脱离身体.md|2026-09-05｜修复蝶翼外置旋转轴导致脱离身体]] |
 | 2026-09-05 | feature | 用户指出场景5入场的渐变背景与飞机相对镜头运动太平淡，要求参考场景1的标本纵深感觉，加入云和少量太阳效果，丰富天空与跟飞体验。 | archived | paper-plane-cloud-sky-chase-motion | [[日志/2026-09-05-丰富纸飞机云层阳光与跟飞动势.md|2026-09-05｜丰富纸飞机云层阳光与跟飞动势]] |

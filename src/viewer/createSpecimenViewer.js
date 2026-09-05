@@ -25,6 +25,7 @@ import { createInfiniteBloomScene, bindInfiniteBloomPanel } from './infiniteBloo
 import { createPaperOrbitScene, bindPaperOrbitPanel } from './paperOrbitScene.js';
 import { createButterflyScene, bindButterflyPanel } from './butterflyScene.js';
 import { createDappledLightScene, bindDappledLightPanel } from './dappledLightScene.js';
+import { createCharacterScene, bindCharacterPanel } from './characterScene.js';
 
 const MODEL_URL = '/models/specimen-frame.glb';
 
@@ -274,6 +275,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let butterflyAtmosphere = null;
   let butterflyBloom = null;
   let dappled = null;
+  let character = null;
   let sceneSwitcher = null;
   let disposePollenBackdrop = null;
 
@@ -302,6 +304,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
   butterflyScene.name = '场景6·蝶翼';
   const dappledScene = new THREE.Scene();
   dappledScene.name = '场景7·斑驳光影';
+  const characterScene = new THREE.Scene();
+  characterScene.name = '场景11·字符物理实验';
   const camera = new THREE.PerspectiveCamera(
     40,
     Math.max(container.clientWidth, 1) / Math.max(container.clientHeight, 1),
@@ -327,7 +331,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         if (activeSceneId !== 'butterfly') butterflyAtmosphere?.pauseClock();
         if (activeSceneId === 'specimen') depthStack?.flush();
         const cinematicCamera = activeSceneId === 'paper' && paper?.ownsCamera;
-        const screenSpace = activeSceneId === 'dappled' || activeSceneId === 'firework';
+        const screenSpace = ['dappled', 'firework', 'character'].includes(activeSceneId);
         const parallaxAnimated = cinematicCamera || screenSpace ? false : pointerParallax?.update(timestamp) ?? false;
         if (!cinematicCamera && !screenSpace) pointerParallax?.apply();
         let atmosphereAnimated = false;
@@ -337,6 +341,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         let paperAnimated = false;
         let butterflyAnimated = false;
         let dappledAnimated = false;
+        let characterAnimated = false;
         try {
           if (activeSceneId === 'specimen') {
             atmosphereAnimated = atmosphere.update(timestamp, !document.hidden);
@@ -365,11 +370,14 @@ export function createSpecimenViewer(container, { onError } = {}) {
           } else if (activeSceneId === 'dappled') {
             dappledAnimated = dappled?.update(timestamp, !document.hidden) ?? false;
             dappled?.render();
+          } else if (activeSceneId === 'character') {
+            characterAnimated = character?.update(timestamp, !document.hidden) ?? false;
+            character?.render();
           }
         } finally {
           pointerParallax?.restoreCamera();
         }
-        if (atmosphereAnimated || pollenAnimated || fireworkAnimated || flowerAnimated || paperAnimated || butterflyAnimated || dappledAnimated || parallaxAnimated) requestRender();
+        if (atmosphereAnimated || pollenAnimated || fireworkAnimated || flowerAnimated || paperAnimated || butterflyAnimated || dappledAnimated || characterAnimated || parallaxAnimated) requestRender();
       }
     });
   };
@@ -402,6 +410,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     reducedMotion: motionPreference.matches,
   });
   dappled.setSize(container.clientWidth, container.clientHeight);
+  character = createCharacterScene(characterScene, renderer, requestRender, { reducedMotion: motionPreference.matches });
+  character.setSize(container.clientWidth, container.clientHeight);
   fireworkPost = createFireworkPost(
     renderer,
     fireworkScene,
@@ -425,6 +435,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     paper.pauseClock();
     butterfly.pauseClock();
     dappled.pauseClock();
+    character.pauseClock();
     sceneSwitcher?.pauseClock();
     if (document.hidden) pointerParallax.resetInput({ immediate: true });
     if (document.hidden && renderFrame) { window.cancelAnimationFrame(renderFrame); renderFrame = 0; }
@@ -467,6 +478,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     fireworkPost?.setSize(width, height, Math.min(window.devicePixelRatio, 2));
     firework?.setSize(width, height);
     dappled?.setSize(width, height);
+    character?.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     requestRender();
@@ -585,6 +597,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     const paperFolder = bindPaperOrbitPanel(gui, paper);
     const butterflyFolder = bindButterflyPanel(gui, butterfly);
     const dappledFolder = bindDappledLightPanel(gui, dappled, requestRender);
+    const characterFolder = bindCharacterPanel(gui, character);
     const specimenFolders = ['深邃效果', '外框插槽管理', '内框插槽管理', '渲染设置']
       .map((title) => gui.folders.find((folder) => folder._title === title));
     sceneSwitcher = createSceneSwitcher(gui, {
@@ -605,6 +618,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
       butterfly,
       dappledScene,
       dappled,
+      characterScene,
+      character,
       specimenFolders,
       pollenFolders: [pollenFolder],
       fireworkFolders: [fireworkFolder],
@@ -612,6 +627,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
       paperFolders: [paperFolder],
       butterflyFolders: [butterflyFolder],
       dappledFolders: [dappledFolder],
+      characterFolders: [characterFolder],
       worldFolders: ['梦境背景与迎光', '指针视差', 'HDRI 环境设置']
         .map(title => gui.folders.find(folder => folder._title === title)),
     });
@@ -630,6 +646,10 @@ export function createSpecimenViewer(container, { onError } = {}) {
     if (['firework', '3'].includes(preview)) {
       sceneSwitcher.switchTo('firework');
       fireworkFolder.open();
+    }
+    if (['character', '11'].includes(preview)) {
+      sceneSwitcher.switchTo('character');
+      characterFolder.open();
     }
     requestRender();
   };
@@ -674,6 +694,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     paper.dispose();
     butterfly.dispose();
     dappled.dispose();
+    character.dispose();
     softEdges?.dispose();
     embeddedCore?.dispose();
     slices.dispose();
