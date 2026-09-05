@@ -18,7 +18,7 @@ import { createDreamAtmosphere, bindAtmospherePanel } from './dreamAtmosphere.js
 import { createTransparentOrdering } from './transparentOrdering.js';
 import { createPointerParallax, bindPointerParallaxPanel } from './pointerParallax.js';
 import { createPollenScene, bindPollenPanel } from './pollenScene.js';
-import { createFireworkScene, bindFireworkPanel } from './fireworkScene.js';
+import { createFireworkScene, bindFireworkPanel } from './fireworkExperience.js';
 import { createFireworkPost } from './fireworkPost.js';
 import { createSceneSwitcher } from './sceneSwitcher.js';
 import { createInfiniteBloomScene, bindInfiniteBloomPanel } from './infiniteBloomScene.js';
@@ -289,7 +289,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   pollenScene.name = '场景2·花粉星云';
   pollenScene.background = new THREE.Color('#ffffff');
   const fireworkScene = new THREE.Scene();
-  fireworkScene.name = '场景3·金菊闪柳烟花';
+  fireworkScene.name = '场景3·指尖花火';
   fireworkScene.background = new THREE.Color('#000000');
   const flowerScene = new THREE.Scene();
   flowerScene.name = '场景4·无限花开';
@@ -323,7 +323,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         const activeSceneId = sceneSwitcher?.activeId ?? 'specimen';
         if (activeSceneId === 'specimen') depthStack?.flush();
         const cinematicCamera = activeSceneId === 'paper' && paper?.ownsCamera;
-        const screenSpace = activeSceneId === 'dappled';
+        const screenSpace = activeSceneId === 'dappled' || activeSceneId === 'firework';
         const parallaxAnimated = cinematicCamera || screenSpace ? false : pointerParallax?.update(timestamp) ?? false;
         if (!cinematicCamera && !screenSpace) pointerParallax?.apply();
         let atmosphereAnimated = false;
@@ -376,7 +376,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
   });
   firework = createFireworkScene(fireworkScene, renderer, requestRender, {
     reducedMotion: motionPreference.matches,
+    camera, controls,
   });
+  firework.setSize(container.clientWidth, container.clientHeight);
   flower = createInfiniteBloomScene(flowerScene, renderer, requestRender, {
     reducedMotion: motionPreference.matches,
   });
@@ -393,7 +395,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     renderer,
     fireworkScene,
     camera,
-    firework.parameters,
+    () => firework.parameters,
     () => firework.renderScale,
   );
   fireworkPost.setSize(
@@ -451,6 +453,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(width, height);
     fireworkPost?.setSize(width, height, Math.min(window.devicePixelRatio, 2));
+    firework?.setSize(width, height);
     dappled?.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -611,6 +614,10 @@ export function createSpecimenViewer(container, { onError } = {}) {
     if (['dappled', '7'].includes(preview)) {
       sceneSwitcher.switchTo('dappled');
       dappledFolder.open();
+    }
+    if (['firework', '3'].includes(preview)) {
+      sceneSwitcher.switchTo('firework');
+      fireworkFolder.open();
     }
     requestRender();
   };

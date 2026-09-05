@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export const SCENE_LABELS = Object.freeze({
   specimen: '场景1·标本纵深',
   pollen: '场景2·花粉星云',
-  firework: '场景3·金菊闪柳烟花',
+  firework: '场景3·指尖花火',
   flower: '场景4·无限花开',
   paper: '场景5·纸飞机环游',
   butterfly: '场景6·蝶翼',
@@ -201,7 +201,7 @@ export function createSceneSwitcher(gui, {
   status.className = 'viewer-scene-status';
 
   function refreshFolders() {
-    worldFolders.forEach(item => item.show(activeId !== 'dappled'));
+    worldFolders.forEach(item => item.show(!['dappled', 'firework'].includes(activeId)));
     for (const [id, entry] of Object.entries(entries)) {
       entry.folders.forEach((item) => item.show(id === activeId));
     }
@@ -209,7 +209,7 @@ export function createSceneSwitcher(gui, {
     status.textContent = {
       specimen: '已隔离激活场景1：标本透明、纵深、太阳与 Bloom',
       pollen: '已隔离激活场景2：三层花粉粒子与中央能量核心',
-      firework: '已隔离激活场景3：金菊主枝、冷绿闪烁簇与柳尾 Bloom',
+      firework: '场景3：单击发射 · 拖动旋转 · 滚轮缩放 · 音效可关闭',
       flower: '已隔离激活场景4：逐片展开、外瓣脱落与风中飘散',
       butterfly: '已激活场景6：蓝色蝴蝶与循环扇翅动画',
       paper: '已隔离激活场景5：纸飞机沿立体航道环游低多边形星球',

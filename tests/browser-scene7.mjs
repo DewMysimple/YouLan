@@ -143,7 +143,7 @@ try {
   assert.ok(Object.values(report.cleanup).every(Boolean),JSON.stringify(report.cleanup));
 
   report.existingScenes = [];
-  for (const [id,label] of [['pollen','场景2·花粉星云'],['firework','场景3·金菊闪柳烟花'],['flower','场景4·无限花开'],['paper','场景5·纸飞机环游'],['butterfly','场景6·蝶翼']]) {
+  for (const [id,label] of [['pollen','场景2·花粉星云'],['firework','场景3·指尖花火'],['flower','场景4·无限花开'],['paper','场景5·纸飞机环游'],['butterfly','场景6·蝶翼']]) {
     await b.set(select,'当前场景',label);
     await b.until(`document.querySelector('.viewer-scene-status').dataset.scene===${JSON.stringify(id)}`);
     await b.delay(350);

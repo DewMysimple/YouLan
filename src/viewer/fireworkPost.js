@@ -64,6 +64,7 @@ export function createFireworkPost(renderer, scene, camera, parameters, getRende
     },
     render() {
       if (disposed) return;
+      const settings = typeof parameters === 'function' ? parameters() : parameters;
       syncSize();
       const previousTarget = renderer.getRenderTarget();
       const previousFace = renderer.getActiveCubeFace();
@@ -75,14 +76,14 @@ export function createFireworkPost(renderer, scene, camera, parameters, getRende
         renderer.autoClear = true;
         renderer.setRenderTarget(beauty);
         renderer.render(scene, camera);
-        const bloomActive = parameters.bloomEnabled && parameters.bloomStrength > 0;
+        const bloomActive = settings.bloomEnabled && settings.bloomStrength > 0;
         output.uniforms.fireworkBloomEnabled.value = bloomActive;
         if (bloomActive) {
           renderer.setRenderTarget(work);
           copyQuad.render(renderer);
-          bloom.strength = parameters.bloomStrength;
-          bloom.radius = parameters.bloomRadius;
-          bloom.threshold = parameters.bloomThreshold;
+          bloom.strength = settings.bloomStrength;
+          bloom.radius = settings.bloomRadius;
+          bloom.threshold = settings.bloomThreshold;
           bloom.renderToScreen = false;
           bloom.render(renderer, null, work, 0, false);
         }
