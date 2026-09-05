@@ -6,7 +6,7 @@ const output = process.env.QA_OUTPUT || 'artifacts/scene10';
 await mkdir(output, { recursive: true });
 const b = await browserHarness(output);
 const report = [];
-const scene10 = '场景10·纸间来信';
+const scene10 = '场景11·纸间来信';
 const select = name => b.set(['场景选择'], '当前场景', name);
 const move = (x, y) => b.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
 const activeAnimations = `document.querySelector('.viewer-feather').getAnimations({subtree:true}).filter(a=>a.playState==='running').length`;
@@ -98,18 +98,18 @@ try {
 
   await b.send('Emulation.setTouchEmulationEnabled', { enabled: false });
   await b.send('Emulation.setDeviceMetricsOverride', { width: 1600, height: 824, deviceScaleFactor: 1, mobile: false });
-  await select('场景1·标本纵深');
+  await select('场景2·标本纵深');
   const camera = await b.evaluate(`__camera.position.toArray()`);
-  for (const name of ['场景2·花粉星云', '场景3·指尖花火', '场景4·无限花开', '场景5·纸飞机环游', '场景6·蝶翼', '场景7·斑驳光影', '场景8·纵深花廊', '场景9·狮城手记']) {
+  for (const name of ['场景3·花粉星云', '场景4·指尖花火', '场景5·无限花开', '场景6·纸飞机环游', '场景7·蝶翼', '场景8·斑驳光影', '场景9·纵深花廊', '场景10·狮城手记']) {
     await select(name); await b.delay(150); await select(scene10); await b.delay(100);
   }
-  await select('场景11·字符物理实验');
+  await select('场景12·字符物理实验');
   await b.until(`__observed.some(o=>o.userData?.character?.ready)`);
   await b.delay(250); await select(scene10);
   const characterFrames = await b.evaluate(`__observed.find(o=>o.userData?.character?.ready).userData.character.frames`);
   await b.delay(250);
   assert.equal(await b.evaluate(`__observed.find(o=>o.userData?.character?.ready).userData.character.frames`), characterFrames);
-  await select('场景1·标本纵深');
+  await select('场景2·标本纵深');
   assert.deepEqual(await b.evaluate(`__camera.position.toArray()`), camera);
   assert.equal(await b.evaluate(activeAnimations), 0);
   assert.equal(await b.evaluate(`document.querySelector('.viewer-feather').hidden`), true);

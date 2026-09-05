@@ -10,12 +10,12 @@ export function createFireworkPost(renderer, scene, camera, parameters, getRende
     type: supported ? THREE.HalfFloatType : THREE.UnsignedByteType,
     depthBuffer: true,
   });
-  beauty.texture.name = '场景3烟花线性原画';
+  beauty.texture.name = '场景4烟花线性原画';
   const work = new THREE.WebGLRenderTarget(1, 1, {
     type: supported ? THREE.HalfFloatType : THREE.UnsignedByteType,
     depthBuffer: false,
   });
-  work.texture.name = '场景3烟花Bloom输入';
+  work.texture.name = '场景4烟花Bloom输入';
   const bloom = new UnrealBloomPass(new THREE.Vector2(32, 32), 1, .5, .4);
   const copy = new THREE.ShaderMaterial({
     uniforms: { inputTexture: { value: beauty.texture } },

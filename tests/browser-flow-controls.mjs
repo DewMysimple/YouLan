@@ -17,17 +17,17 @@ try {
   await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   await b.set(['指针视差'], '启用指针视差', false);
   await b.set(dream, '背景流动', false);
-  await b.set(['场景选择'], '当前场景', '场景6·蝶翼');
+  await b.set(['场景选择'], '当前场景', '场景7·蝶翼');
   await b.until(`document.querySelector('.viewer-butterfly-status').dataset.kind==='ready'`);
-  await b.set(['场景6·蝶翼'], '播放扇翅', false);
-  await b.set(['场景6·蝶翼'], '飞行起伏', false);
-  await b.evaluate(`window.bf=__observed.findLast(o=>o.name==='场景6·蝶翼');
+  await b.set(['场景7·蝶翼'], '播放扇翅', false);
+  await b.set(['场景7·蝶翼'], '飞行起伏', false);
+  await b.evaluate(`window.bf=__observed.findLast(o=>o.name==='场景7·蝶翼');
     window.sky=bf.getObjectByName('流动混色天空（独立环境）');window.bfRenders=0;
     bf.onAfterRender=()=>bfRenders++;void 0;`);
   await b.delay(1500);
   await b.evaluate(`folder(['梦境背景与迎光']).classList.remove('closed');
     folder(${JSON.stringify(flow)}).classList.remove('closed');
-    folder(['场景6·蝶翼']).classList.add('closed');void 0;`);
+    folder(['场景7·蝶翼']).classList.add('closed');void 0;`);
   await pixels('01-default-panel.png');
   // Freeze the background and isolate it from the solar glare to compare actual pixels.
   await b.set(dream, '尽头亮心强度', 0);
@@ -61,6 +61,8 @@ try {
   }
   await b.click(flow,'恢复混色默认');
   assert.deepEqual(await b.evaluate('({...__renderer.info.memory,programs:__renderer.info.programs.length})'),initialMemory);
+  // Let the reset's explicitly requested frame complete before measuring idle.
+  await b.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
   const renders=await b.evaluate('bfRenders');await b.delay(400);
   assert.equal(await b.evaluate('bfRenders'),renders,'editing paused background returns to idle');
   for (const mode of ['HDRI / 纯白','纯黑对照']) {
@@ -70,25 +72,25 @@ try {
   await b.set(dream,'背景模式','流动混色');
   assert.equal(await b.evaluate(`controller(${JSON.stringify(flow)},'色块大小').querySelector('input').disabled`),false);
   await b.set(flow,'颜色1 · 底色','#124578');await b.set(flow,'色块大小',2.2);
-  for (const target of ['场景1·标本纵深','场景2·花粉星云','场景6·蝶翼']) {
+  for (const target of ['场景2·标本纵深','场景3·花粉星云','场景7·蝶翼']) {
     await b.set(['场景选择'],'当前场景',target);await b.delay(250);
     const state=await b.evaluate(`(()=>{const s=__observed.findLast(o=>o.name===${JSON.stringify(target)});
       const sky=s.getObjectByName('流动混色天空（独立环境）')||s.getObjectByName('流动混色天空（共享背景）');
       return {color:sky.material.uniforms.pink.value.getHexString(),size:sky.material.uniforms.blockSize.value,
         counts:sky.material.uniforms.dreamHasCounts.value};})()`);
     assert.equal(state.color,'124578');assert.equal(state.size,2.2);
-    if(target!=='场景1·标本纵深')assert.equal(state.counts,false);
+    if(target!=='场景2·标本纵深')assert.equal(state.counts,false);
   }
   report.sharedControls=true;
-  await b.set(['场景选择'],'当前场景','场景1·标本纵深');
+  await b.set(['场景选择'],'当前场景','场景2·标本纵深');
   await b.set(dream,'背景模式','纯黑对照');
   for (const slot of [['外框插槽管理'],['内框插槽管理']]) {
     await b.set(slot,'不透明度',1);await b.set(slot,'透射率',0);await b.set(slot,'写入深度（遮挡后层）',true);
   }
-  const occluded=await pixels();await b.set(dream,'模型遮挡影响（场景1）',0);
+  const occluded=await pixels();await b.set(dream,'模型遮挡影响（场景2）',0);
   assert.ok(changed(occluded,await pixels('04-occlusion-disabled.png')),'generated model mask controls solar glare');
   await b.click(['深邃效果'],'恢复调好的默认效果');
-  await b.set(['场景选择'],'当前场景','场景6·蝶翼');
+  await b.set(['场景选择'],'当前场景','场景7·蝶翼');
   await b.set(dream,'背景流动',false);
   await b.evaluate(`folder(['梦境背景与迎光']).scrollIntoView();void 0;`);
   await pixels('05-final-panel.png');

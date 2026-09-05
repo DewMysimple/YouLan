@@ -73,7 +73,7 @@ export function createPaperOrbitSky(root, camera, parameters) {
         #include <colorspace_fragment>
       }`,
   }));
-  backdrop.name = '场景5·粉彩天空'; backdrop.frustumCulled = false; backdrop.renderOrder = -10000;
+  backdrop.name = '场景6·粉彩天空'; backdrop.frustumCulled = false; backdrop.renderOrder = -10000;
   root.add(backdrop);
 
   const random = seededRandom(7331);
@@ -121,7 +121,7 @@ export function createPaperOrbitSky(root, camera, parameters) {
       }`,
   });
   const clouds = new THREE.InstancedMesh(geometry, cloudMaterial, banks.length);
-  clouds.name = '场景5·远近云层'; clouds.frustumCulled = false;
+  clouds.name = '场景6·远近云层'; clouds.frustumCulled = false;
   // Each bank has puffs at different world depths; sort all translucent puffs
   // back-to-front after camera motion, including during the intro.
   clouds.instanceMatrix.setUsage(THREE.DynamicDrawUsage); details.setUsage(THREE.DynamicDrawUsage);

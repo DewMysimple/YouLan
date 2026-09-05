@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 
 export const POLLEN_DEFAULTS = Object.freeze({
@@ -199,7 +200,7 @@ export function createPollenScene(scene, renderer, requestRender, { reducedMotio
       colors: ['#b879ff', '#ffb9e8'], geometry: { seed: 307, width: 17, height: 10, depth: 15, size: [18, 42] } },
   ];
   const root = new THREE.Group();
-  root.name = '场景2·幽兰花粉星云';
+  root.name = '场景3·幽兰花粉星云';
   root.position.z = -7;
   const layers = specifications.map((specification) => createParticleLayer(specification, sharedUniforms));
   layers.forEach(({ points }) => root.add(points));
@@ -304,7 +305,7 @@ export function createPollenScene(scene, renderer, requestRender, { reducedMotio
 }
 
 export function bindPollenPanel(gui, pollen, requestRender) {
-  const folder = gui.addFolder('场景2·花粉星云');
+  const folder = gui.addFolder(SCENE_LABELS.pollen);
   const p = pollen.parameters;
   const update = () => { pollen.apply(); requestRender(); };
   folder.add(p, 'enabled').name('启用粒子场景').onChange(update);
@@ -328,7 +329,7 @@ export function bindPollenPanel(gui, pollen, requestRender) {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '场景2与标本几何、切片计数、透明排序和局部 Bloom 代理完全分离。三层粒子都使用批量几何和 GPU 动画，数量变化不会创建大量独立 Mesh。减少动态效果偏好开启时自动暂停。';
+  note.textContent = '场景3与标本几何、切片计数、透明排序和局部 Bloom 代理完全分离。三层粒子都使用批量几何和 GPU 动画，数量变化不会创建大量独立 Mesh。减少动态效果偏好开启时自动暂停。';
   folder.$children.appendChild(note);
   function refresh() {
     status.textContent = `三层粒子：${p.dustCount} 微尘 / ${p.pollenCount} 花粉 / ${p.petalCount} 花瓣`;

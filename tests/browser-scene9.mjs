@@ -10,7 +10,7 @@ const state = () => b.evaluate('sf.sketchbookScene.state');
 try {
   await b.open({ dream: true });
   const camera = await b.evaluate('__camera.position.toArray()');
-  await choose('场景9·狮城手记');
+  await choose('场景10·狮城手记');
   await b.until(`document.querySelector('.viewer-sketchbook iframe')?.contentWindow?.sketchbookScene && document.querySelector('.viewer-sketchbook iframe').contentDocument.body.dataset.ready === '1'`);
   await b.evaluate(`window.sf=document.querySelector('.viewer-sketchbook iframe').contentWindow; window.sd=sf.document;`);
   await b.delay(5000);
@@ -45,10 +45,10 @@ try {
     assert.ok(await b.evaluate('sd.querySelector("#sbBook .sb-full img").naturalWidth > 0'));
   }
   await b.evaluate('sd.getElementById("plates").scrollIntoView()'); await b.delay(500); await b.screenshot('03-index.png');
-  const labels=['场景1·标本纵深','场景2·花粉星云','场景3·指尖花火','场景4·无限花开','场景5·纸飞机环游','场景6·蝶翼','场景7·斑驳光影','场景8·纵深花廊'];
+  const labels=['场景2·标本纵深','场景3·花粉星云','场景4·指尖花火','场景5·无限花开','场景6·纸飞机环游','场景7·蝶翼','场景8·斑驳光影','场景9·纵深花廊'];
   for (const label of labels) {
     await choose(label); assert.equal((await state()).active,false);
-    await b.delay(100); await choose('场景9·狮城手记'); assert.equal((await state()).page,8);
+    await b.delay(100); await choose('场景10·狮城手记'); assert.equal((await state()).page,8);
   }
   assert.deepEqual(await b.evaluate('__camera.position.toArray()'),camera);
   await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
@@ -93,12 +93,12 @@ try {
   await b.delay(1400); assert.equal((await state()).page,0);
   await b.until('sf.eval("raf") === null');
   await b.evaluate('sf.sketchbookScene.next()');
-  await choose('场景8·纵深花廊');
+  await choose('场景9·纵深花廊');
   assert.equal(await b.evaluate('sf.eval("raf")'),null);
   const frozen = await b.evaluate('sd.getElementById("sb3d").style.getPropertyValue("--tt")');
   await b.delay(300);
   assert.equal(await b.evaluate('sd.getElementById("sb3d").style.getPropertyValue("--tt")'),frozen);
-  await choose('场景9·狮城手记'); await b.delay(1500);
+  await choose('场景10·狮城手记'); await b.delay(1500);
   assert.equal((await state()).page,1);
   await b.evaluate(`(async()=>{window.extraHost=document.createElement('div'); extraHost.style.cssText='position:fixed;inset:0';document.body.append(extraHost);window.extra= (await import('/src/viewer/sketchbookScene.jsx')).createSketchbookScene(extraHost);extra.activate()})()`);
   await b.until('extraHost.querySelector("iframe")?.contentWindow.sketchbookScene');

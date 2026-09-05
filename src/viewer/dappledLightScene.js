@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 import { SCREEN_VERTEX, DAPPLED_FIELD_FRAGMENT, DAPPLED_BLUR_FRAGMENT, DAPPLED_OUTPUT_FRAGMENT } from './dappledLightShaders.js';
 
@@ -89,9 +90,9 @@ export function createDappledLightScene(scene, renderer, requestRender, options 
     minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
     generateMipmaps: false,
   });
-  target.texture.name = '场景7·二维光影场';
+  target.texture.name = '场景8·二维光影场';
   const blurTarget = target.clone();
-  blurTarget.texture.name = '场景7·散焦光影';
+  blurTarget.texture.name = '场景8·散焦光影';
   const uniforms = {
     uField: { value: target.texture }, uBlurred: { value: blurTarget.texture },
     uBlurTexel: { value: new THREE.Vector2(1, 1) }, uAspect: { value: 1 },
@@ -111,11 +112,11 @@ export function createDappledLightScene(scene, renderer, requestRender, options 
   const blurMaterial = material(DAPPLED_BLUR_FRAGMENT);
   const outputMaterial = material(DAPPLED_OUTPUT_FRAGMENT);
   const fieldScene = new THREE.Scene();
-  fieldScene.name = '场景7·光影离屏计算';
+  fieldScene.name = '场景8·光影离屏计算';
   const fieldPlane = new THREE.Mesh(geometry, fieldMaterial);
   const outputPlane = new THREE.Mesh(geometry, outputMaterial);
   fieldPlane.frustumCulled = outputPlane.frustumCulled = false;
-  outputPlane.name = '场景7·二维斑驳光影';
+  outputPlane.name = '场景8·二维斑驳光影';
   fieldScene.add(fieldPlane);
   scene.add(outputPlane);
   scene.background = null;
@@ -231,7 +232,7 @@ export function createDappledLightScene(scene, renderer, requestRender, options 
 }
 
 export function bindDappledLightPanel(gui, dappled, requestRender) {
-  const folder = gui.addFolder('场景7·斑驳光影');
+  const folder = gui.addFolder(SCENE_LABELS.dappled);
   const p = dappled.parameters;
   const change = () => { dappled.pauseClock(); requestRender(); };
   folder.add(p, 'followPointer').name('指针跟随').onChange(change);

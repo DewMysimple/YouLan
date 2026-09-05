@@ -75,7 +75,7 @@ export function createPaintedFireworks(scene, renderer, requestRender, { reduced
     depthTest: false, depthWrite: false, toneMapped: false,
   }));
   sky.name = '彩色花火·独立纸幕'; sky.frustumCulled = false; sky.renderOrder = -100;
-  const root = new THREE.Group(); root.name = '场景3·指尖彩色花火'; root.add(sky, ribbons); scene.add(root);
+  const root = new THREE.Group(); root.name = '场景4·指尖彩色花火'; root.add(sky, ribbons); scene.add(root);
   const sparkGeometry = new THREE.BufferGeometry();
   const sparkData = [];
   const sparkRandom = fireworkRandom(2026);

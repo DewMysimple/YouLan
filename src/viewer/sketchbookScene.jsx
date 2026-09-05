@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import { createRoot } from 'react-dom/client';
 import { MengToSketchbookLandingPage } from './sketchbook/MengToSketchbookLandingPage';
 import localScript from './sketchbook/localization.js?raw';
@@ -13,7 +14,7 @@ export function createSketchbookScene(container, { reducedMotion = false } = {})
   function configure() { api()?.configure(parameters); }
   function applyScene(loadedFrame) {
     if (disposed) return;
-    frame = loadedFrame; frame.title = '场景9·狮城手记';
+    frame = loadedFrame; frame.title = SCENE_LABELS.sketchbook;
     const doc = frame.contentDocument;
     if (!doc?.getElementById('sbBook')) return;
     if (!doc.getElementById('youlan-sketchbook-style')) {
@@ -61,7 +62,7 @@ export function createSketchbookScene(container, { reducedMotion = false } = {})
 }
 
 export function bindSketchbookPanel(gui, sketchbook) {
-  const folder = gui.addFolder('场景9·狮城手记');
+  const folder = gui.addFolder(SCENE_LABELS.sketchbook);
   folder.add(sketchbook.parameters, 'tilt', 0, 1, .01).name('手账视差幅度').onChange(sketchbook.configure);
   folder.add(sketchbook.parameters, 'magnify', 1.5, 3.5, .1).name('放大镜倍率').onChange(sketchbook.configure);
   folder.add(sketchbook.parameters, 'wash', 0, 1, .01).name('水彩背景浓度').onChange(sketchbook.configure);

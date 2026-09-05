@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 import { SceneEngine, STAGE_LABELS } from './character/scene.ts';
 import { DEFAULT_PHYSICS, DESIGN_WIDTH, DESIGN_HEIGHT, SCENE_DURATION } from './character/types.ts';
@@ -9,7 +10,7 @@ export function createCharacterScene(scene, renderer, requestRender, { reducedMo
   const parameters = { ...DEFAULT_PHYSICS, playing: !reducedMotion, time: 0 };
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('场景11需要 Canvas 2D 支持');
+  if (!context) throw new Error('场景12需要 Canvas 2D 支持');
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.generateMipmaps = false;
@@ -31,7 +32,7 @@ export function createCharacterScene(scene, renderer, requestRender, { reducedMo
       }`,
   });
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
-  plane.name = '场景11·字符花园画布'; plane.frustumCulled = false; scene.add(plane);
+  plane.name = '场景12·字符花园画布'; plane.frustumCulled = false; scene.add(plane);
   const camera = new THREE.Camera();
   let engine = null, active = false, disposed = false, previousTime = null, dirty = true;
   let width = 1, height = 1, scale = 1, refresh = () => {}, lastPublish = -Infinity;
@@ -131,7 +132,7 @@ export function createCharacterScene(scene, renderer, requestRender, { reducedMo
 }
 
 export function bindCharacterPanel(gui, character) {
-  const folder = gui.addFolder('场景11·字符物理实验'), p = character.parameters;
+  const folder = gui.addFolder(SCENE_LABELS.character), p = character.parameters;
   folder.add(p, 'playing').name('播放动画').onChange(character.apply);
   folder.add(p, 'time', 0, SCENE_DURATION, .01).name('时间预览（秒）').onChange(character.seek);
   folder.add(character, 'replay').name('重播字符花园');
@@ -156,7 +157,7 @@ export function bindCharacterPanel(gui, character) {
     folder.controllersRecursive().forEach(c => { if (!c.domElement.contains(document.activeElement)) c.updateDisplay(); });
     const time = Math.min(SCENE_DURATION, p.time);
     const snapshot = character.snapshot;
-    status.textContent = snapshot ? `${STAGE_LABELS[snapshot.stage]} · ${time.toFixed(2)} / 8.00 秒 · 蝴蝶 ${snapshot.butterflies} · 花朵 ${snapshot.flowers}` : '首次进入场景11时开始字符花园';
+    status.textContent = snapshot ? `${STAGE_LABELS[snapshot.stage]} · ${time.toFixed(2)} / 8.00 秒 · 蝴蝶 ${snapshot.butterflies} · 花朵 ${snapshot.flowers}` : '首次进入场景12时开始字符花园';
     status.dataset.time = String(time);
   });
   return folder;

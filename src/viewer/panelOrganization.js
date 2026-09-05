@@ -1,8 +1,9 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 // Only presentation: move existing controller DOM nodes, never replace their
 // bindings, ranges or values. Keep the native lil-gui keyboard/focus behavior.
 export function organizeViewerPanel(gui) {
   const layouts = {
-    '场景8·纵深花廊': [
+    [SCENE_LABELS.gallery]: [
       ['穿行与构图', ['穿行进度', '滚动灵敏度', '滚动缓动（秒）', '画面纵深间距', '花卉画面大小', '左右错落幅度']],
       ['视差与氛围', ['指针视差幅度', '滚动呼吸幅度', '氛围动画', '氛围流动速度', '背景混色浓度', '胶片颗粒']],
       ['空间光带', ['显示空间光带', '光带粗细', '光带亮度', '光带微粒']],
@@ -19,7 +20,7 @@ export function organizeViewerPanel(gui) {
     '梦境背景与迎光': [
       ['背景', ['启用梦境效果', '背景模式', '背景流动', '流动速度', '混色背景亮度']],
       ['远端亮心', ['亮心距离模式', '尽头亮心强度', '亮心半径', '亮心距末层']],
-      ['迎光', ['迎光放射强度', '亮心柔晕', '光束扩散范围', '边缘渐隐范围（%）', '显隐过渡时长（秒）', '紫色层级保护', '模型遮挡影响（场景1）']],
+      ['迎光', ['迎光放射强度', '亮心柔晕', '光束扩散范围', '边缘渐隐范围（%）', '显隐过渡时长（秒）', '紫色层级保护', '模型遮挡影响（场景2）']],
     ],
     '指针视差': [
       ['视角跟随', ['启用指针视差', '视差幅度（°）', '垂直响应比例', '跟随缓动（秒）']],
@@ -30,20 +31,20 @@ export function organizeViewerPanel(gui) {
       ['体积与轮廓', ['内嵌色体透射', '轮廓清晰度', '轮廓宽度（像素）']],
       ['输出与质量', ['曝光', '透射分辨率比例']],
     ],
-    '场景2·花粉星云': [
+    [SCENE_LABELS.pollen]: [
       ['运动', ['启用粒子场景', '粒子流动', '流动速度', '漂浮强度', '漩涡强度', '整体尺寸']],
       ['三层粒子', ['远层微尘数量', '中层花粉数量', '近层花瓣数量']],
       ['色彩与发光', ['微尘颜色', '花粉颜色', '花瓣颜色', '粒子柔光', '能量核心强度', '能量核心大小']],
       ['操作', ['重置粒子场景']],
     ],
-    '场景3·指尖花火': [
+    [SCENE_LABELS.firework]: [
       ['播放与交互', ['烟花模式', '启用彩色花火', '播放动画', '自动烟花秀', '连发间隔（秒）', '播放速度', '时间预览（秒）', '五彩齐放', '重新演出']],
       ['色带与二次绽放', ['烟花尺寸', '每朵主枝数', '弧线卷曲', '三维纵深', '彩带厚度', '尾部粗细', '枝端二次绽放']],
       ['色彩与纸幕', ['烟花配色', '色带亮度', '纸面颗粒', '天空预设', '天空顶部', '天空底部']],
       ['声音与画质', ['烟花音效', '音效音量', '启用柔光', '柔光强度', '画质']],
       ['操作', ['恢复参考效果']],
     ],
-    '场景5·纸飞机环游': [
+    [SCENE_LABELS.paper]: [
       ['入场镜头', ['重播入场', '跳过入场']],
       ['飞机与环游', ['播放环游', '纸飞机数量', '飞行速度', '纸飞机大小']],
       ['立体航道', ['环绕半径', '航道起伏', '星球自转', '显示飞行路径', '路径透明度']],
@@ -52,13 +53,13 @@ export function organizeViewerPanel(gui) {
       ['粉彩天空', ['天空顶部', '天空底部', '天空柔光']],
       ['操作', ['重置纸飞机环游', '重试模型加载']],
     ],
-    '场景7·斑驳光影': [
+    [SCENE_LABELS.dappled]: [
       ['指针与流动', ['指针跟随', '跟随缓动（秒）', '光影流动', '流动速度']],
       ['光斑形态', ['光照范围', '光斑密度', '光斑倾角（°）', '光斑拉伸', '斑驳散布', '波纹扭曲']],
       ['光影质感', ['散焦柔化', '光影对比', '细微颗粒', '珊瑚底色', '暖光颜色', '阴影颜色']],
       ['操作', ['光照回中', '恢复参考效果']],
     ],
-    '场景4·无限花开': [
+    [SCENE_LABELS.flower]: [
       ['播放与循环', ['启用无限花开', '播放绽放', '无限循环', '绽放速度', '周期预览', '重新播放花开', '花瓣在枝时长（秒）']],
       ['花冠结构', ['生长花瓣层数', '展开时长比例', '盛放停留比例', '代际旋转角（°）', '花冠整体尺寸', '代际纵深间距', '花瓣微风', '显示原始枝叶']],
       ['脱落与飘散', ['飘落持续（秒）', '向右风力', '下落重力']],
@@ -74,7 +75,7 @@ export function organizeViewerPanel(gui) {
     ['自发光', ['自发光颜色', '自发光强度', '仅局部光纹发光']],
   ];
   layouts['外框插槽管理'] = layouts['内框插槽管理'] = material;
-  const order = ['场景选择', '深邃效果', '场景2·花粉星云', '场景3·指尖花火', '场景4·无限花开', '场景5·纸飞机环游', '场景6·蝶翼', '场景7·斑驳光影', '场景8·纵深花廊', '场景9·狮城手记', '场景10·纸间来信', '场景11·字符物理实验', '梦境背景与迎光', '指针视差', 'HDRI 环境设置', '外框插槽管理', '内框插槽管理', '渲染设置'];
+  const order = ['场景选择', SCENE_LABELS.opening, '深邃效果', SCENE_LABELS.pollen, SCENE_LABELS.firework, SCENE_LABELS.flower, SCENE_LABELS.paper, SCENE_LABELS.butterfly, SCENE_LABELS.dappled, SCENE_LABELS.gallery, SCENE_LABELS.sketchbook, SCENE_LABELS.feather, SCENE_LABELS.character, '梦境背景与迎光', '指针视差', 'HDRI 环境设置', '外框插槽管理', '内框插槽管理', '渲染设置'];
   for (const title of order) {
     const folder = gui.folders.find(f => f._title === title);
     if (!folder) continue;
@@ -97,13 +98,13 @@ export function organizeViewerPanel(gui) {
       if (title === '场景选择' && name === '隔离切换') {
         folder.$children.appendChild(folder.$children.querySelector('.viewer-scene-status'));
       }
-      if (title === '场景2·花粉星云' && name === '三层粒子') {
+      if (title === SCENE_LABELS.pollen && name === '三层粒子') {
         folder.$children.appendChild(folder.$children.querySelector('.viewer-particle-status'));
       }
-      if (title === '场景3·指尖花火' && name === '播放与交互') {
+      if (title === SCENE_LABELS.firework && name === '播放与交互') {
         folder.$children.appendChild(folder.$children.querySelector(':scope > .viewer-painted-status'));
       }
-      if (title === '场景4·无限花开' && name === '播放与循环') {
+      if (title === SCENE_LABELS.flower && name === '播放与循环') {
         folder.$children.appendChild(folder.$children.querySelector('.viewer-flower-status'));
       }
     }

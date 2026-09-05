@@ -6,9 +6,9 @@ const output=process.argv[2];await mkdir(output,{recursive:true});
 const b=await browserHarness(output);
 try {
   await b.open({dream:true});await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
-  await b.set(['场景选择'],'当前场景','场景4·无限花开');
-  await b.until(`__observed.some(o=>o.name==='场景4·无限花开'&&o.userData.infiniteBloom?.ready)`);
-  await b.set(['场景4·无限花开'],'绽放速度',1);
+  await b.set(['场景选择'],'当前场景','场景5·无限花开');
+  await b.until(`__observed.some(o=>o.name==='场景5·无限花开'&&o.userData.infiniteBloom?.ready)`);
+  await b.set(['场景5·无限花开'],'绽放速度',1);
   await b.evaluate(`document.querySelector('.lil-gui.root').style.display='none'`);
   await b.evaluate(`window.__bloomRecording={status:'recording'}; window.__bloomVideoPromise=new Promise(resolve=>{
     const stream=__renderer.domElement.captureStream(24),chunks=[];
@@ -33,6 +33,6 @@ try {
   let data='';
   for(let offset=0;offset<length;offset+=262144)data+=await b.evaluate(`__bloomVideoPromise.then(s=>s.slice(${offset},${offset+262144}))`);
   await writeFile(join(output,'infinite-bloom-preview.webm'),Buffer.from(data.split(',')[1],'base64'));
-  await b.set(['场景4·无限花开'],'播放绽放',false);await b.delay(200);await b.screenshot('infinite-bloom-preview.png');
+  await b.set(['场景5·无限花开'],'播放绽放',false);await b.delay(200);await b.screenshot('infinite-bloom-preview.png');
   console.log(JSON.stringify({recording:join(output,'infinite-bloom-preview.webm'),errors:b.errors}));
 }finally{b.close();}

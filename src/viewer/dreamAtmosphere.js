@@ -379,7 +379,7 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   flow.add(p, 'maskPreview', ['关闭', '颜色1 / 2 混合', '颜色3覆盖']).name('混色遮罩预览').onChange(requestRender);
   flow.add({ reset() { atmosphere.restoreFlow(); folder.controllersRecursive().forEach(c => c.updateDisplay()); update(); } }, 'reset').name('恢复混色默认');
   const flowNote = document.createElement('div'); flowNote.className = 'viewer-effect-note';
-  flowNote.textContent = '配色与图案由场景1、2、6共享。占比偏移为正时增加颜色2，为负时增加底色；色块越大越舒展。没有外部遮罩图片；灰度预览显示实时生成的混色权重，白色表示该颜色占比高。色带跟随迎光，仅在场景1、6太阳可见时出现；预览保留场景模型与迎光。恢复混色默认只重置本组，刷新恢复全部默认。';
+  flowNote.textContent = '配色与图案由场景2、3、7共享。占比偏移为正时增加颜色2，为负时增加底色；色块越大越舒展。没有外部遮罩图片；灰度预览显示实时生成的混色权重，白色表示该颜色占比高。色带跟随迎光，仅在场景2、7太阳可见时出现；预览保留场景模型与迎光。恢复混色默认只重置本组，刷新恢复全部默认。';
   const flowHelp = document.createElement('details'); flowHelp.className = 'viewer-panel-help';
   const flowSummary = document.createElement('summary'); flowSummary.textContent = '配色与遮罩说明';
   flowHelp.append(flowSummary, flowNote); flow.$children.appendChild(flowHelp);
@@ -393,10 +393,10 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   folder.add(p, 'edgeFade', 0, 25, .5).name('边缘渐隐范围（%）').onChange(requestRender);
   folder.add(p, 'transitionTime', 0, 2, .05).name('显隐过渡时长（秒）').onChange(requestRender);
   folder.add(p, 'protection', 0, 1, .01).name('紫色层级保护').onChange(requestRender);
-  folder.add(p, 'occlusionStrength', 0, 1, .01).name('模型遮挡影响（场景1）').onChange(requestRender);
+  folder.add(p, 'occlusionStrength', 0, 1, .01).name('模型遮挡影响（场景2）').onChange(requestRender);
   const note = document.createElement('div'); note.className = 'viewer-effect-note';
   note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。太阳接近画面边缘时，光束按渐隐范围平滑变化；快速移入移出时再按过渡时长柔和追随，0 秒可恢复即时切换。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
-  note.textContent += ' 模型遮挡来自实时渲染的切片覆盖纹理，场景1专用；影响为1时按模型衰减迎光，0时忽略遮挡。场景6不使用这张纹理。';
+  note.textContent += ' 模型遮挡来自实时渲染的切片覆盖纹理，场景2专用；影响为1时按模型衰减迎光，0时忽略遮挡。场景7不使用这张纹理。';
   folder.$children.appendChild(note);
   function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); flow.controllersRecursive().forEach(c => c.enable(moving)); distance.enable(p.sunMode === '有限距离'); }
   atmosphere.onPanelRefresh(refresh);

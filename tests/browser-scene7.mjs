@@ -8,7 +8,7 @@ if (!output) throw new Error('Provide output directory; CDP_URL and VIEWER_URL s
 await mkdir(output, { recursive: true });
 const b = await browserHarness(output);
 const select = ['场景选择'];
-const panel = ['场景7·斑驳光影'];
+const panel = ['场景8·斑驳光影'];
 const report = {};
 const move = (x, y, type = 'mouseMoved', extras = {}) => b.send('Input.dispatchMouseEvent', {type, x, y, ...extras});
 
@@ -19,11 +19,11 @@ try {
   await b.set(['梦境背景与迎光'], '背景流动', false);
   await b.delay(150);
   const camera = await b.evaluate(`({position:__camera.position.toArray(),quaternion:__camera.quaternion.toArray(),fov:__camera.fov})`);
-  await b.set(select, '当前场景', '场景7·斑驳光影');
-  await b.until(`__observed.some(s=>s.name==='场景7·斑驳光影')`);
+  await b.set(select, '当前场景', '场景8·斑驳光影');
+  await b.until(`__observed.some(s=>s.name==='场景8·斑驳光影')`);
   await b.evaluate(`
-    window.scene7=__observed.findLast(s=>s.name==='场景7·斑驳光影');
-    window.screen7=scene7.getObjectByName('场景7·二维斑驳光影');
+    window.scene7=__observed.findLast(s=>s.name==='场景8·斑驳光影');
+    window.screen7=scene7.getObjectByName('场景8·二维斑驳光影');
     window.u7=screen7.material.uniforms;
     window.renders7=0;
     scene7.onAfterRender=()=>renders7++;
@@ -43,7 +43,7 @@ try {
   assert.ok(await b.evaluate('u7.uTime.value') > startTime);
 
   await b.set(panel, '光影流动', false);
-  await b.evaluate(`folder(['场景7·斑驳光影']).classList.remove('closed');`);
+  await b.evaluate(`folder(['场景8·斑驳光影']).classList.remove('closed');`);
   await b.screenshot('01-scene7-panel.png');
   await b.evaluate(`document.querySelector('.lil-gui.root').style.visibility='hidden';`);
   await move(720,382);
@@ -99,15 +99,15 @@ try {
   await b.set(panel,'光影流动',false);
   const memory = await b.evaluate('({...__renderer.info.memory,programs:__renderer.info.programs.length})');
   for (let i=0;i<3;i++) {
-    await b.set(select,'当前场景','场景1·标本纵深');
+    await b.set(select,'当前场景','场景2·标本纵深');
     await b.delay(80);
     assert.equal(await b.evaluate('scene.visible'),true);
-    await b.set(select,'当前场景','场景7·斑驳光影');
+    await b.set(select,'当前场景','场景8·斑驳光影');
     await b.delay(80);
   }
   assert.deepEqual(await b.evaluate('({...__renderer.info.memory,programs:__renderer.info.programs.length})'),memory);
   report.resources = memory;
-  await b.set(select,'当前场景','场景1·标本纵深');
+  await b.set(select,'当前场景','场景2·标本纵深');
   await b.delay(150);
   assert.deepEqual(await b.evaluate(`({position:__camera.position.toArray(),quaternion:__camera.quaternion.toArray(),fov:__camera.fov})`),camera);
   assert.ok(await b.evaluate(`['HDRI 环境设置','梦境背景与迎光','指针视差'].every(s=>getComputedStyle(folder([s])).display!=='none')`));
@@ -115,7 +115,7 @@ try {
   await move(760,410,'mouseMoved',{button:'left',buttons:1});
   await move(760,410,'mouseReleased',{button:'left',buttons:0,clickCount:1});
   assert.notDeepEqual(await b.evaluate('__camera.position.toArray()'),camera.position,'OrbitControls is restored on returning to 3D');
-  await b.set(select,'当前场景','场景7·斑驳光影');
+  await b.set(select,'当前场景','场景8·斑驳光影');
   await b.send('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:2,mobile:true});
   await b.delay(200);
   assert.ok(Math.abs(await b.evaluate('u7.uAspect.value')-390/844) < 1e-6);
@@ -143,12 +143,12 @@ try {
   assert.ok(Object.values(report.cleanup).every(Boolean),JSON.stringify(report.cleanup));
 
   report.existingScenes = [];
-  for (const [id,label] of [['pollen','场景2·花粉星云'],['firework','场景3·指尖花火'],['flower','场景4·无限花开'],['paper','场景5·纸飞机环游'],['butterfly','场景6·蝶翼']]) {
+  for (const [id,label] of [['pollen','场景3·花粉星云'],['firework','场景4·指尖花火'],['flower','场景5·无限花开'],['paper','场景6·纸飞机环游'],['butterfly','场景7·蝶翼']]) {
     await b.set(select,'当前场景',label);
     await b.until(`document.querySelector('.viewer-scene-status').dataset.scene===${JSON.stringify(id)}`);
     await b.delay(350);
     assert.equal(await b.evaluate('scene7.visible'),false);
-    await b.set(select,'当前场景','场景7·斑驳光影');
+    await b.set(select,'当前场景','场景8·斑驳光影');
     await b.delay(100);
     assert.equal(await b.evaluate('scene7.visible'),true);
     report.existingScenes.push(label);

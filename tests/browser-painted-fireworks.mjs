@@ -7,7 +7,7 @@ const output = process.argv[2];
 if (!output) throw new Error('Provide screenshot output directory.');
 await mkdir(output, { recursive: true });
 const b = await browserHarness(output);
-const panel = ['场景3·指尖花火'];
+const panel = ['场景4·指尖花火'];
 const report = {};
 try {
   await b.send('Page.addScriptToEvaluateOnNewDocument',{source:`
@@ -20,13 +20,13 @@ try {
   `});
   await b.open({ dream: true });
   await b.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-  await b.set(['场景选择'], '当前场景', '场景3·指尖花火');
-  await b.evaluate(`window.fireScene=__observed.findLast(s=>s.name==='场景3·指尖花火');window.ribbon=fireScene.getObjectByName('彩色花火·固定批量色带');window.fu=ribbon.material.uniforms;window.frames=0;fireScene.onAfterRender=()=>frames++;`);
+  await b.set(['场景选择'], '当前场景', '场景4·指尖花火');
+  await b.evaluate(`window.fireScene=__observed.findLast(s=>s.name==='场景4·指尖花火');window.ribbon=fireScene.getObjectByName('彩色花火·固定批量色带');window.fu=ribbon.material.uniforms;window.frames=0;fireScene.onAfterRender=()=>frames++;`);
   await b.set(panel, '时间预览（秒）', 3.2);
   await b.delay(200);
   assert.deepEqual(await b.evaluate(`__renderer.info.programs.filter(p=>p.diagnostics && !p.diagnostics.runnable).map(p=>({name:p.name,log:p.diagnostics.fragmentShader.log}))`), []);
   await b.screenshot('fireworks-01-new-default.png');
-  report.initial = await b.evaluate(`({canvas:document.querySelectorAll('canvas').length,instanced:ribbon.geometry.isInstancedBufferGeometry,instances:ribbon.geometry.instanceCount,visible:ribbon.parent.visible,classicHidden:!fireScene.getObjectByName('场景3·金菊闪柳烟花主体').visible,time:fu.clockTime.value})`);
+  report.initial = await b.evaluate(`({canvas:document.querySelectorAll('canvas').length,instanced:ribbon.geometry.isInstancedBufferGeometry,instances:ribbon.geometry.instanceCount,visible:ribbon.parent.visible,classicHidden:!fireScene.getObjectByName('场景4·金菊闪柳烟花主体').visible,time:fu.clockTime.value})`);
   assert.equal(report.initial.canvas, 1); assert.equal(report.initial.instanced, true); assert.equal(report.initial.classicHidden, true);
   const frames = await b.evaluate('frames'); await b.delay(350); assert.equal(await b.evaluate('frames'), frames);
   report.pausedOnDemand = true;
@@ -76,7 +76,7 @@ try {
     assert.ok((await b.evaluate(`document.querySelector('.viewer-painted-status').textContent`)).includes('静音'));
     await b.set(panel, '烟花模式', '金菊闪柳（原版）');
     assert.equal(await b.evaluate(`ribbon.parent.visible`), false);
-    assert.equal(await b.evaluate(`fireScene.getObjectByName('场景3·金菊闪柳烟花主体').visible`), true);
+    assert.equal(await b.evaluate(`fireScene.getObjectByName('场景4·金菊闪柳烟花主体').visible`), true);
     await b.set(panel, '烟花模式', '彩色指尖花火');
     await b.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     await b.delay(150);
@@ -99,10 +99,10 @@ try {
     report.touch = true;
     await b.evaluate(`document.querySelector('.lil-gui.root').style.visibility=''`);
     await b.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-    for (const label of ['场景1·标本纵深','场景2·花粉星云','场景4·无限花开','场景5·纸飞机环游','场景6·蝶翼','场景7·斑驳光影']) {
+    for (const label of ['场景2·标本纵深','场景3·花粉星云','场景5·无限花开','场景6·纸飞机环游','场景7·蝶翼','场景8·斑驳光影']) {
       await b.set(['场景选择'], '当前场景', label); await b.delay(100);
       assert.equal(await b.evaluate('ribbon.parent.visible'), false);
-      await b.set(['场景选择'], '当前场景', '场景3·指尖花火');
+      await b.set(['场景选择'], '当前场景', '场景4·指尖花火');
     }
     report.sceneRoundtrips = true;
     // Compile / upload the classic mode once before measuring live allocations.
@@ -116,12 +116,12 @@ try {
     assert.equal(await b.evaluate('JSON.stringify(__renderer.info.memory)'),before);
     report.stableResources = true;
     await b.set(panel,'时间预览（秒）',3.2);
-    await b.evaluate(`folder(['场景3·指尖花火']).classList.remove('closed')`);
+    await b.evaluate(`folder(['场景4·指尖花火']).classList.remove('closed')`);
     await b.screenshot('fireworks-06-final-preview.png');
     assert.equal(b.errors.length,0,JSON.stringify(b.errors));
     report.consoleErrors = b.errors;
     await writeFile(join(output,'fireworks-report.json'),JSON.stringify(report,null,2));
-    await b.send('Page.navigate',{url:new URL('?scene=3',process.env.VIEWER_URL || 'http://127.0.0.1:5173/').href});
+    await b.send('Page.navigate',{url:new URL('?scene=4',process.env.VIEWER_URL || 'http://127.0.0.1:5173/').href});
     await b.until(`document.querySelector('.viewer-scene-status')?.dataset.scene==='firework'`);
     await b.delay(350); await b.screenshot('fireworks-08-live-preview.png');
     assert.equal(b.errors.length,0,JSON.stringify(b.errors));

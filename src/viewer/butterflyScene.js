@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -51,7 +52,7 @@ function createDust(root) {
 
 export function createButterflyScene(scene, requestRender, { reducedMotion = false } = {}) {
   const parameters = { ...BUTTERFLY_DEFAULTS, playing: !reducedMotion };
-  const root = new THREE.Group(); root.name='场景6·蝶翼'; scene.add(root);
+  const root = new THREE.Group(); root.name=SCENE_LABELS.butterfly; scene.add(root);
   // The asset faces +Y with wings in XY. Lay it in XZ, head toward the −Z sun.
   // Keep this rest orientation outside the animated hover transform.
   const heading = new THREE.Group(); heading.name='蝴蝶水平迎光'; heading.rotation.x=-Math.PI/2; root.add(heading);
@@ -145,7 +146,7 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
 }
 
 export function bindButterflyPanel(gui,butterfly){
-  const folder=gui.addFolder('场景6·蝶翼');const p=butterfly.parameters,update=()=>butterfly.apply();
+  const folder=gui.addFolder(SCENE_LABELS.butterfly);const p=butterfly.parameters,update=()=>butterfly.apply();
   folder.add(p,'playing').name('播放扇翅').onChange(update);
   folder.add(p,'speed',0,3,.01).name('扇翅速度').onChange(update);
   folder.add(p,'amplitude',0,1,.01).name('扇翅幅度').onChange(update);

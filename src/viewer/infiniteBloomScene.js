@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MAX_BLOOM_LAYERS, PETAL_POOL_SIZE, samplePetals, splitPetalGeometry, installPetalDeformation } from './bloomPetals.js';
@@ -70,7 +71,7 @@ function createBackdrop() {
     bloomBackgroundAccent: { value: new THREE.Color(INFINITE_BLOOM_DEFAULTS.backgroundAccent) },
   };
   const material = new THREE.ShaderMaterial({
-    name: '场景4·深夜花园背景',
+    name: '场景5·深夜花园背景',
     uniforms,
     side: THREE.BackSide,
     depthWrite: false,
@@ -102,7 +103,7 @@ function createBackdrop() {
     `,
   });
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(72, 40, 24), material);
-  mesh.name = '场景4·独立深夜花园';
+  mesh.name = '场景5·独立深夜花园';
   mesh.renderOrder = -1000;
   return { mesh, material, uniforms };
 }
@@ -125,7 +126,7 @@ function createDust() {
   geometry.setAttribute('bloomDustSize', new THREE.BufferAttribute(sizes, 1));
   geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 46);
   const material = new THREE.ShaderMaterial({
-    name: '场景4·浮尘材质',
+    name: '场景5·浮尘材质',
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -156,7 +157,7 @@ function createDust() {
     `,
   });
   const points = new THREE.Points(geometry, material);
-  points.name = '场景4·缓慢浮尘';
+  points.name = '场景5·缓慢浮尘';
   points.renderOrder = -100;
   return { points, geometry, material };
 }
@@ -208,7 +209,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
 } = {}) {
   const parameters = { ...INFINITE_BLOOM_DEFAULTS, playing: !reducedMotion, backgroundFlow: !reducedMotion };
   const root = new THREE.Group();
-  root.name = '场景4·无限花开根节点';
+  root.name = '场景5·无限花开根节点';
   root.position.set(0, .25, 0);
   scene.add(root);
 
@@ -366,7 +367,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     subsurfaceUniforms.map.value = subsurfaceTexture;
 
     petalMaterial = bloomSource.material.clone();
-    petalMaterial.name = '场景4·杜鹃花瓣真实材质';
+    petalMaterial.name = '场景5·杜鹃花瓣真实材质';
     petalMaterial.side = THREE.DoubleSide;
     petalMaterial.vertexColors = true;
     petalMaterial.emissive.set('#210807');
@@ -375,7 +376,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     petalMaterial.sheenColor.set('#ff8e82');
     petalMaterial.sheenRoughness = .82;
     branchMaterial = branchSource.material.clone();
-    branchMaterial.name = '场景4·杜鹃枝叶真实材质';
+    branchMaterial.name = '场景5·杜鹃枝叶真实材质';
     branchMaterial.side = THREE.DoubleSide;
     installSubsurface(petalMaterial, subsurfaceUniforms, true);
     installSubsurface(branchMaterial, subsurfaceUniforms);
@@ -383,7 +384,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     sourceGeometry = bloomSource.geometry;
     splitPetalGeometry(sourceGeometry).forEach((geometry, index) => {
       const batch = new THREE.InstancedMesh(geometry, petalMaterial, PETAL_POOL_SIZE);
-      batch.name = `场景4·独立花瓣批次${index + 1}`;
+      batch.name = `场景5·独立花瓣批次${index + 1}`;
       batch.frustumCulled = false;
       batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       petalBatches.push(batch);
@@ -391,7 +392,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
     });
 
     branch = new THREE.Mesh(branchSource.geometry, branchMaterial);
-    branch.name = '场景4·真实枝叶与花蕊';
+    branch.name = '场景5·真实枝叶与花蕊';
     branch.frustumCulled = false;
     root.add(branch);
     modelResources = [bloomSource.material, branchSource.material];
@@ -410,7 +411,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
   }).catch((error) => {
     loadError = error instanceof Error ? error : new Error(String(error));
     scene.userData.infiniteBloom = { ready: false, error: loadError.message };
-    console.error('场景4杜鹃花资产加载失败：', loadError);
+    console.error('场景5杜鹃花资产加载失败：', loadError);
     panelRefresh();
     requestRender();
   });
@@ -514,7 +515,7 @@ export function createInfiniteBloomScene(scene, renderer, requestRender, {
 }
 
 export function bindInfiniteBloomPanel(gui, flower, requestRender) {
-  const folder = gui.addFolder('场景4·无限花开');
+  const folder = gui.addFolder(SCENE_LABELS.flower);
   const parameters = flower.parameters;
   const update = () => { flower.apply(); requestRender(); };
 

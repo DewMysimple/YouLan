@@ -1,0 +1,20 @@
+.viewer-opening { position:absolute; inset:0; overflow:hidden; background:#727b96 url('/nomadic/background_blue_pattern.jpg') repeat; background-size:var(--opening-texture-size,512px); cursor:none; color:#252525; }
+.viewer-opening[hidden] { display:none; }
+.has-opening > canvas { visibility:hidden; }
+body:has(.has-opening) .lil-gui.root.closed { width:132px !important; }
+.opening-paper { position:absolute; inset:0; background:#f3f0e7 url('/nomadic/background_white_pattern.jpg') repeat; background-size:var(--opening-texture-size,512px); clip-path:circle(0 at 50% 50%); }
+.opening-circle-border { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); border:1px solid #343332; border-radius:50%; pointer-events:none; }
+.opening-line { position:absolute; width:10px; height:24vh; max-height:290px; left:50%; top:50%; transform:translate(-50%,-50%); pointer-events:none; }
+.opening-line path { stroke:#f5f1e7; stroke-width:1.5; fill:none; stroke-linecap:round; }
+.opening-enter { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); border:0; border-radius:50%; background:transparent; padding:0; display:flex; align-items:center; justify-content:center; cursor:none; }
+.opening-enter img { display:block; width:22vw; max-width:none; height:auto; opacity:0; pointer-events:none; }
+.opening-enter:focus-visible { outline:2px solid #343332; outline-offset:6px; }
+.opening-cursor { position:absolute; left:0; top:0; width:0; height:0; pointer-events:none; }
+.opening-cursor::before { content:''; position:absolute; width:12px; height:12px; transform:translate(-50%,-50%); background:url('/nomadic/background_white_pattern.jpg'); border:1px solid #343332; border-radius:48% 52% 49% 51%; transition:width .2s,height .2s; }
+.opening-cursor span { position:absolute; transform:translate(-50%,-50%); font:600 11px Arial,sans-serif; opacity:0; }
+.opening-cursor.is-enter::before { width:60px; height:60px; }
+.opening-cursor.is-enter span { opacity:1; }
+.opening-error { position:absolute; left:50%; top:65%; transform:translateX(-50%); color:#fff; font-size:13px; }
+.opening-error button { cursor:pointer; }
+@media(max-width:640px) { .opening-enter img { width:63vw; } .opening-cursor { display:none; } }
+@media(prefers-reduced-motion:reduce) { .opening-cursor::before { transition:none; } }

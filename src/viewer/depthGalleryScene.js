@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 import backgroundFragment from './depthGallery/background.glsl?raw';
 import { GALLERY_SLIDES, GALLERY_DEFAULTS, galleryBlend, dampGallery, normalizeGalleryWheel } from './depthGallery/data.js';
@@ -167,7 +168,7 @@ export function createDepthGalleryScene(scene, renderer, requestRender, { reduce
 }
 
 export function bindDepthGalleryPanel(gui, gallery, requestRender) {
-  const folder = gui.addFolder('场景8·纵深花廊'), p = gallery.parameters;
+  const folder = gui.addFolder(SCENE_LABELS.gallery), p = gallery.parameters;
   folder.add(p, 'progress', 0, 1, .001).name('穿行进度').listen().onChange(requestRender);
   folder.add(p, 'wheelSpeed', .2, 2, .05).name('滚动灵敏度').onChange(requestRender);
   folder.add(p, 'smoothing', .05, .8, .01).name('滚动缓动（秒）').onChange(requestRender);

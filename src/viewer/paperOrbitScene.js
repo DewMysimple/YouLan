@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MAX_PLANES, TAU, createLanes, seededRandom, sampleOrbit, installOrbitShader } from './paperOrbitMotion.js';
@@ -31,7 +32,7 @@ function disposeTree(root) {
 export function createPaperOrbitScene(scene, requestRender, { reducedMotion = false, camera, controls, resetParallax = () => {} } = {}) {
   const parameters = { ...PAPER_ORBIT_DEFAULTS, playing: !reducedMotion };
   const root = new THREE.Group();
-  root.name = '场景5·纸飞机环游星球';
+  root.name = '场景6·纸飞机环游星球';
   scene.add(root);
   const sky = createPaperOrbitSky(root, camera, parameters);
   const planet = new THREE.Group();
@@ -288,7 +289,7 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
 }
 
 export function bindPaperOrbitPanel(gui, paper) {
-  const folder = gui.addFolder('场景5·纸飞机环游');
+  const folder = gui.addFolder(SCENE_LABELS.paper);
   const p = paper.parameters, update = () => paper.apply();
   folder.add({ replay: () => paper.replayIntro() }, 'replay').name('重播入场');
   const skip = folder.add({ skip: () => paper.skipIntro() }, 'skip').name('跳过入场');

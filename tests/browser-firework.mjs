@@ -8,19 +8,19 @@ if (!output) throw new Error('Provide output directory');
 await mkdir(output, { recursive: true });
 const b = await browserHarness(output);
 const selector = ['场景选择'];
-const fireworkFolder = ['场景3·指尖花火', '场景3·金菊闪柳烟花'];
+const fireworkFolder = ['场景4·指尖花火', '场景4·金菊闪柳烟花'];
 const report = {};
 
 try {
   await b.open({ dream: true });
   await b.until(`document.querySelector('.viewer-panel-status[data-environment]').textContent.includes('加载完成')`);
   const specimenCamera = await b.evaluate('__camera.position.toArray()');
-  await b.set(selector, '当前场景', '场景3·指尖花火');
-  await b.set(['场景3·指尖花火'], '烟花模式', '金菊闪柳（原版）');
-  await b.until(`__observed.some(object => object.isScene && object.name === '场景3·指尖花火')`);
+  await b.set(selector, '当前场景', '场景4·指尖花火');
+  await b.set(['场景4·指尖花火'], '烟花模式', '金菊闪柳（原版）');
+  await b.until(`__observed.some(object => object.isScene && object.name === '场景4·指尖花火')`);
   await b.evaluate(`
-    window.scene3 = __observed.findLast(object => object.isScene && object.name === '场景3·指尖花火');
-    window.fireworkRoot = scene3.getObjectByName('场景3·金菊闪柳烟花主体');
+    window.scene3 = __observed.findLast(object => object.isScene && object.name === '场景4·指尖花火');
+    window.fireworkRoot = scene3.getObjectByName('场景4·金菊闪柳烟花主体');
     window.scene3Renders = 0;
     scene3.onAfterRender = () => scene3Renders++;
   `);
@@ -28,9 +28,9 @@ try {
     scene1Visible: scene.visible,
     scene3Visible: scene3.visible,
     specimenInScene3: !!scene3.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS'),
-    fireworkInScene1: !!scene.getObjectByName('场景3·金菊闪柳烟花主体'),
+    fireworkInScene1: !!scene.getObjectByName('场景4·金菊闪柳烟花主体'),
     sameEnvironment: scene.environment === scene3.environment,
-    ownBackground: !!scene3.getObjectByName('场景3独立夜空背景'),
+    ownBackground: !!scene3.getObjectByName('场景4独立夜空背景'),
   })`);
   assert.deepEqual(report.isolation, {
     scene1Visible: false,
@@ -49,7 +49,7 @@ try {
     flash: !!fireworkRoot.getObjectByName('爆心闪光与青绿烟晕'),
     continuousTrails: fireworkRoot.getObjectByName('金菊柳尾连续线')?.geometry.attributes.position.count,
     scene1FoldersHidden: ['深邃效果','外框插槽管理','内框插槽管理','渲染设置'].every(title => getComputedStyle(folder([title])).display === 'none'),
-    scene3FolderVisible: getComputedStyle(folder(['场景3·指尖花火'])).display !== 'none',
+    scene3FolderVisible: getComputedStyle(folder(['场景4·指尖花火'])).display !== 'none',
   })`);
   assert.deepEqual(report.batches.points.map(({ name }) => name), ['上升火箭尾迹', '金菊放射主枝', '冷绿白闪烁簇']);
   assert.deepEqual(report.batches.points.map(({ allocated }) => allocated), [192, 5760, 10000]);
@@ -90,32 +90,32 @@ try {
   assert.equal(await b.evaluate(`fireworkRoot.getObjectByName('金菊放射主枝').material.uniforms.fireworkBranches.value`), 24);
 
   const scene3Camera = await b.evaluate('__camera.position.toArray()');
-  await b.set(selector, '当前场景', '场景1·标本纵深');
+  await b.set(selector, '当前场景', '场景2·标本纵深');
   await b.delay(180);
   const restoredSpecimenCamera = await b.evaluate('__camera.position.toArray()');
   restoredSpecimenCamera.forEach((value, index) => assert.ok(Math.abs(value - specimenCamera[index]) < 1e-8));
-  await b.set(selector, '当前场景', '场景3·指尖花火');
+  await b.set(selector, '当前场景', '场景4·指尖花火');
   await b.delay(180);
   const restoredScene3Camera = await b.evaluate('__camera.position.toArray()');
   restoredScene3Camera.forEach((value, index) => assert.ok(Math.abs(value - scene3Camera[index]) < 1e-8));
 
   // Warm every scene once before taking the stability baseline because Three.js
   // compiles scene-specific programs lazily on first render.
-  await b.set(selector, '当前场景', '场景2·花粉星云');
+  await b.set(selector, '当前场景', '场景3·花粉星云');
   await b.delay(120);
-  await b.set(selector, '当前场景', '场景3·指尖花火');
+  await b.set(selector, '当前场景', '场景4·指尖花火');
   await b.delay(120);
   const resources = await b.evaluate('({...__renderer.info.memory, programs: __renderer.info.programs.length})');
   for (let index = 0; index < 5; index++) {
-    await b.set(selector, '当前场景', '场景2·花粉星云');
+    await b.set(selector, '当前场景', '场景3·花粉星云');
     await b.delay(50);
-    await b.set(selector, '当前场景', '场景3·指尖花火');
+    await b.set(selector, '当前场景', '场景4·指尖花火');
     await b.delay(50);
   }
   assert.deepEqual(await b.evaluate('({...__renderer.info.memory, programs: __renderer.info.programs.length})'), resources);
   report.resources = resources;
 
-  await b.evaluate(`folder(['场景3·指尖花火']).classList.remove('closed');folder(${JSON.stringify(fireworkFolder)}).classList.remove('closed');controller(${JSON.stringify(fireworkFolder)},'性能档位').scrollIntoView({block:'center'});`);
+  await b.evaluate(`folder(['场景4·指尖花火']).classList.remove('closed');folder(${JSON.stringify(fireworkFolder)}).classList.remove('closed');controller(${JSON.stringify(fireworkFolder)},'性能档位').scrollIntoView({block:'center'});`);
   await b.delay(150);
   assert.ok(await b.evaluate(`(()=>{const r=controller(${JSON.stringify(fireworkFolder)},'性能档位').getBoundingClientRect();return r.top>=0&&r.bottom<=1000;})()`));
   await b.screenshot('06-scene3-desktop-panel.png');

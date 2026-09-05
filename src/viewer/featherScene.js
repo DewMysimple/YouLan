@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import cards from './feather/cards.json';
 import './feather/feather.css';
 
@@ -9,7 +10,7 @@ const PREVIEWS = new Set(['order-a20', 'employment-doc', 'login-alert', 'sfo-jfk
 export function createFeatherScene(container, { reducedMotion = false } = {}) {
   const host = document.createElement('section');
   host.className = 'viewer-feather'; host.hidden = true;
-  host.setAttribute('aria-label', '场景10·纸间来信');
+  host.setAttribute('aria-label', SCENE_LABELS.feather);
   container.append(host);
   const parameters = { ...DEFAULTS };
   const animations = new Map();
@@ -226,7 +227,7 @@ export function createFeatherScene(container, { reducedMotion = false } = {}) {
 }
 
 export function bindFeatherPanel(gui, feather) {
-  const folder = gui.addFolder('场景10·纸间来信');
+  const folder = gui.addFolder(SCENE_LABELS.feather);
   folder.add(feather.parameters, 'size', .6, 1.4, .01).name('贴纸尺寸').onChange(feather.configure);
   folder.add(feather.parameters, 'duration', .25, 1.2, .05).name('聚散时长（秒）').onChange(feather.configure);
   folder.add(feather.parameters, 'orbitSpeed', .3, 2, .05).name('环绕速度').onChange(feather.configure);

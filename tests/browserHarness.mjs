@@ -73,7 +73,7 @@ export async function browserHarness(output) {
         };
       }};
     ` });
-    await send('Page.navigate', { url: process.env.VIEWER_URL || 'http://127.0.0.1:5173/' });
+    await send('Page.navigate', { url: process.env.VIEWER_URL || 'http://127.0.0.1:5173/?scene=specimen' });
     await until(`document.querySelectorAll('.lil-gui.root').length === 1 && document.querySelectorAll('.viewer-panel-status').length === 3 && __observed.some(o => o.isScene && o.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS')) && !!window.__camera`);
     await evaluate(`
       window.scene = __observed.findLast(o => o.isScene && o.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS'));

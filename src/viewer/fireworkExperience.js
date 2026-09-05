@@ -1,3 +1,4 @@
+import { SCENE_LABELS } from './sceneCatalog.js';
 import { createFireworkScene as createClassic, bindFireworkPanel as bindClassic } from './fireworkScene.js';
 import { createPaintedFireworks } from './paintedFireworks.js';
 
@@ -32,7 +33,7 @@ export function createFireworkScene(scene, renderer, requestRender, options) {
 }
 
 export function bindFireworkPanel(gui, experience, requestRender) {
-  const folder = gui.addFolder('场景3·指尖花火');
+  const folder = gui.addFolder(SCENE_LABELS.firework);
   folder.add(experience.settings, 'mode', ['彩色指尖花火', '金菊闪柳（原版）']).name('烟花模式').onChange(experience.applyMode);
   const firework = experience.painted, p = firework.parameters;
   const update = () => firework.apply();

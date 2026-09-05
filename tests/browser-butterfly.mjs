@@ -7,7 +7,7 @@ const output=process.argv[2];
 if(!output)throw new Error('Provide output directory');
 await mkdir(output,{recursive:true});
 const b=await browserHarness(output), report={};
-const panel=['场景6·蝶翼'],select=['场景选择'];
+const panel=['场景7·蝶翼'],select=['场景选择'];
 try {
   await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
   await b.open({dream:true});
@@ -15,12 +15,12 @@ try {
   const original=await b.evaluate('__camera.position.toArray()');
   await b.send('Network.enable');
   await b.send('Network.setBlockedURLs',{urls:['*blue-morpho-butterfly.glb']});
-  await b.set(select,'当前场景','场景6·蝶翼');
+  await b.set(select,'当前场景','场景7·蝶翼');
   await b.until(`document.querySelector('.viewer-butterfly-status').dataset.kind==='error'`);
   await b.send('Network.setBlockedURLs',{urls:[]});
   await b.click(panel,'重试模型加载');
   await b.until(`document.querySelector('.viewer-butterfly-status').dataset.kind==='ready'`);
-  await b.evaluate(`window.bf=__observed.findLast(o=>o.name==='场景6·蝶翼');
+  await b.evaluate(`window.bf=__observed.findLast(o=>o.name==='场景7·蝶翼');
     window.hinge=bf.getObjectByName('LeftForewingPivot');window.bfRenders=0;
     bf.onAfterRender=()=>bfRenders++;void 0;`);
   report.failureRecovery=true;
@@ -33,7 +33,7 @@ try {
       ownMaterial:sky.material!==sourceSky.material,counts:sky.material.uniforms.dreamHasCounts.value,
       gate:sky.material.uniforms.dreamGate.value,sun:sky.material.uniforms.dreamSunUv.value.toArray(),
       horizontal:Math.abs(heading.rotation.x+Math.PI/2)<1e-9,
-      oldBackdrop:!!bf.getObjectByName('场景6·林间柔光')};
+      oldBackdrop:!!bf.getObjectByName('场景7·林间柔光')};
   })()`);
   assert.equal(report.atmosphere.sharedClock,true);assert.equal(report.atmosphere.ownMaterial,true);
   assert.equal(report.atmosphere.counts,false);assert.equal(report.atmosphere.gate,1);
@@ -54,7 +54,7 @@ try {
     return {name:n,colorWidth:m.map?.image.width,reliefWidth:m.normalMap?.image.width,metalness:m.metalness};
   })`);
   assert.ok(report.textures.every(t=>t.colorWidth===1536&&t.reliefWidth===1536&&t.metalness===0));
-  await b.evaluate(`folder(['场景6·蝶翼']).classList.remove('closed');void 0`);
+  await b.evaluate(`folder(['场景7·蝶翼']).classList.remove('closed');void 0`);
   await b.screenshot('01-wingbeat.png');
   await b.set(panel,'播放扇翅',false);await b.delay(150);
   const paused=await b.evaluate('({time:bf.userData.butterfly.time,q:hinge.quaternion.toArray(),renders:bfRenders})');
@@ -117,16 +117,16 @@ try {
   await b.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:760,y:550,button:'left',clickCount:1});
   await b.delay(100);await b.screenshot('03-side-view.png');
   const rotated=await b.evaluate('__camera.position.toArray()');
-  await b.set(select,'当前场景','场景1·标本纵深');await b.delay(100);
+  await b.set(select,'当前场景','场景2·标本纵深');await b.delay(100);
   assert.deepEqual(await b.evaluate('__camera.position.toArray()'),original);
   const inactive=await b.evaluate('bf.userData.butterfly.time');await b.delay(220);
   assert.equal(await b.evaluate('bf.userData.butterfly.time'),inactive);
-  await b.set(select,'当前场景','场景6·蝶翼');await b.delay(120);
+  await b.set(select,'当前场景','场景7·蝶翼');await b.delay(120);
   assert.deepEqual(await b.evaluate('__camera.position.toArray()'),rotated);
   const memory=await b.evaluate('({...__renderer.info.memory})');
   for(let i=0;i<3;i++){
-    await b.set(select,'当前场景','场景1·标本纵深');await b.delay(60);
-    await b.set(select,'当前场景','场景6·蝶翼');await b.delay(60);
+    await b.set(select,'当前场景','场景2·标本纵深');await b.delay(60);
+    await b.set(select,'当前场景','场景7·蝶翼');await b.delay(60);
   }
   assert.deepEqual(await b.evaluate('({...__renderer.info.memory})'),memory);
   report.switchingAndResources=true;

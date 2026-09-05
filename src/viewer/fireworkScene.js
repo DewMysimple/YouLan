@@ -499,7 +499,7 @@ export function createFireworkScene(scene, renderer, requestRender, { reducedMot
     fireworkSparkle: { value: new THREE.Color(parameters.sparkleColor) },
   };
   const root = new THREE.Group();
-  root.name = '场景3·金菊闪柳烟花主体';
+  root.name = '场景4·金菊闪柳烟花主体';
   root.position.set(0, 0.6, -8);
 
   const rocketGeometry = buildRocketGeometry();
@@ -556,11 +556,11 @@ export function createFireworkScene(scene, renderer, requestRender, { reducedMot
     fireworkAccent: { value: new THREE.Color(parameters.accentColor) },
   };
   const backgroundMaterial = shaderMaterial(
-    '场景3夜空混色材质', backgroundUniforms, BACKGROUND_VERTEX, BACKGROUND_FRAGMENT,
+    '场景4夜空混色材质', backgroundUniforms, BACKGROUND_VERTEX, BACKGROUND_FRAGMENT,
     { transparent: false, depthTest: false, blending: THREE.NoBlending, side: THREE.BackSide },
   );
   const background = new THREE.Mesh(new THREE.SphereGeometry(90, 32, 20), backgroundMaterial);
-  background.name = '场景3独立夜空背景';
+  background.name = '场景4独立夜空背景';
   background.renderOrder = -100;
   background.frustumCulled = false;
   scene.add(background, root);
@@ -734,7 +734,7 @@ export function createFireworkScene(scene, renderer, requestRender, { reducedMot
 }
 
 export function bindFireworkPanel(gui, firework, requestRender) {
-  const folder = gui.addFolder('场景3·金菊闪柳烟花');
+  const folder = gui.addFolder('场景4·金菊闪柳烟花');
   const p = firework.parameters;
   const update = () => { firework.apply(); requestRender(); };
   folder.add(p, 'enabled').name('启用烟花场景').onChange(update);
@@ -785,7 +785,7 @@ export function bindFireworkPanel(gui, firework, requestRender) {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '参考视频被拆为升空尾迹、金菊放射主枝、冷绿白闪烁簇、金橙柳尾下坠和短暂过曝柔光。所有粒子使用固定批量几何与 GPU 轨迹；性能档位同时控制实际闪烁粒子数和后处理分辨率。场景3拥有独立夜空配色，不会改写场景1/2的梦境背景参数。';
+  note.textContent = '参考视频被拆为升空尾迹、金菊放射主枝、冷绿白闪烁簇、金橙柳尾下坠和短暂过曝柔光。所有粒子使用固定批量几何与 GPU 轨迹；性能档位同时控制实际闪烁粒子数和后处理分辨率。场景4拥有独立夜空配色，不会改写场景2/3的梦境背景参数。';
   folder.$children.appendChild(note);
 
   function refresh() {
