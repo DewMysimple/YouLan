@@ -1,0 +1,22 @@
+@font-face {
+  font-family: FeatherProgramm;
+  src: url('/feather/Gerstner-ProgrammMedium.otf') format('opentype');
+  font-weight: 500;
+  font-display: swap;
+}
+.viewer-feather { position: absolute; inset: 0; z-index: 2; overflow: clip; background: #fefefb; isolation: isolate; touch-action: manipulation; }
+.viewer-feather[hidden] { display: none; }
+.viewer-feather::before { content: ''; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(rgb(0 0 0 / calc(.028 * var(--feather-dots, 1))) 2px, transparent 0); background-size: 28px 28px; }
+.has-feather > canvas { visibility: hidden; }
+body:has(.has-feather) .lil-gui.root.closed { width: 132px !important; }
+.feather-card { position: absolute; display: block; object-fit: contain; pointer-events: none; user-select: none; }
+.feather-handle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: inline-flex; align-items: center; justify-content: center; z-index: 20; min-height: 44px; padding: max(.7vw, 1.2vh) max(1.5vw, 2.5vh); border: 1.5px solid transparent; border-radius: 100px; background: transparent; color: #000; font: 500 max(2.22vw, 3vh)/1.2 FeatherProgramm, Arial, sans-serif; white-space: nowrap; cursor: pointer; -webkit-font-smoothing: antialiased; transition: background .2s ease; }
+.feather-handle svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; stroke: #666; }
+.viewer-feather[data-gathered='true'] .feather-handle { background: rgb(254 254 251 / 45%); backdrop-filter: blur(6px); }
+.feather-handle:focus-visible { outline: 2px solid #64817d; outline-offset: 6px; }
+.feather-owl { position: absolute; top: 0; left: 0; width: max(9vw, 14vh); height: max(12.6vw, 19.6vh); z-index: 100; pointer-events: none; user-select: none; transform-origin: 50% 100%; filter: drop-shadow(0 1px 1px rgb(116 102 72 / 20%)); }
+.feather-error { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 101; padding: 10px 16px; border-radius: 8px; background: #f4f1e9; color: #474238; font: 14px/1.5 sans-serif; }
+.feather-error button { min-height: 44px; margin-left: 12px; background: transparent; border: 0; color: inherit; text-decoration: underline; cursor: pointer; }
+@media (max-width: 768px) { .feather-handle { font-size: max(2vw, 2.8vh); padding: max(.5vw, .8vh) max(1vw, 1.6vh); } }
+@media (max-width: 480px) { .feather-handle { font-size: max(20px, 2.4vh); padding: max(.4vw, .6vh) max(.8vw, 1.2vh); } .feather-owl { width: 100px; height: 140px; } }
+@media (prefers-reduced-motion: reduce) { .feather-handle { transition: none; } }

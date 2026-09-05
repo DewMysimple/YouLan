@@ -2,3 +2,4 @@
 source/threeui-sketchbook/** -text
 src/viewer/sketchbook/vendor/** -text
 public/landing-pages/** -text
+public/feather/** -text

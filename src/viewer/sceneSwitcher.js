@@ -10,6 +10,8 @@ export const SCENE_LABELS = Object.freeze({
   dappled: '场景7·斑驳光影',
   gallery: '场景8·纵深花廊',
   sketchbook: '场景9·狮城手记',
+  feather: '场景10·纸间来信',
+  character: '场景11·字符物理实验',
 });
 
 function cameraState(camera, controls) {
@@ -68,6 +70,8 @@ export function createSceneSwitcher(gui, {
   galleryScene,
   gallery,
   sketchbookScene, sketchbook,
+  featherScene, feather,
+  characterScene, character,
   specimenFolders,
   pollenFolders,
   fireworkFolders,
@@ -77,6 +81,8 @@ export function createSceneSwitcher(gui, {
   dappledFolders,
   galleryFolders,
   sketchbookFolders,
+  featherFolders,
+  characterFolders,
   worldFolders,
 }) {
   const initialSpecimen = cameraState(camera, controls);
@@ -141,6 +147,18 @@ export function createSceneSwitcher(gui, {
   initialButterfly.quaternion.copy(scratch.quaternion);
 
   const entries = {
+    character: {
+      label: SCENE_LABELS.character, scene: characterScene,
+      state: cloneState(initialSpecimen), initial: cloneState(initialSpecimen),
+      folders: characterFolders,
+      activate: () => character.activate(), deactivate: () => character.deactivate(),
+    },
+    feather: {
+      label: SCENE_LABELS.feather, scene: featherScene,
+      state: cloneState(initialSpecimen), initial: cloneState(initialSpecimen),
+      folders: featherFolders,
+      activate: () => feather.activate(), deactivate: () => feather.deactivate(),
+    },
     sketchbook: {
       label: SCENE_LABELS.sketchbook, scene: sketchbookScene,
       state: cloneState(initialSpecimen), initial: cloneState(initialSpecimen),
@@ -220,7 +238,7 @@ export function createSceneSwitcher(gui, {
   status.className = 'viewer-scene-status';
 
   function refreshFolders() {
-    worldFolders.forEach(item => item.show(!['dappled', 'firework', 'gallery', 'sketchbook'].includes(activeId)));
+    worldFolders.forEach(item => item.show(!['dappled', 'firework', 'gallery', 'sketchbook', 'feather', 'character'].includes(activeId)));
     for (const [id, entry] of Object.entries(entries)) {
       entry.folders.forEach((item) => item.show(id === activeId));
     }
@@ -234,6 +252,8 @@ export function createSceneSwitcher(gui, {
       paper: '已隔离激活场景5：纸飞机沿立体航道环游低多边形星球',
       dappled: '场景7：移动指针，让斑驳暖光随之聚散',
       gallery: '场景8：滚轮或上下拖动穿行 · 移动指针产生视差',
+      character: '场景11：字符坠落化蝶 · 花园生长 · 指针扰动',
+      feather: '场景10：悬停中央文字收拢 · 移开散开 · 触屏轻点切换，仅保留首幕',
       sketchbook: '场景9：左右拖动翻页 · 拖动放大镜 · 向下滚动查看目录',
     }[activeId];
   }
@@ -243,14 +263,14 @@ export function createSceneSwitcher(gui, {
     parallax.resetInput({ immediate: true, clearOrigin: true });
     const current = entries[activeId];
     current.deactivate();
-    if (['dappled', 'gallery', 'sketchbook'].includes(activeId)) controls.enabled = worldControlsEnabled;
+    if (['dappled', 'gallery', 'sketchbook', 'feather', 'character'].includes(activeId)) controls.enabled = worldControlsEnabled;
     current.state = cameraState(camera, controls);
     current.scene.visible = false;
     activeId = nextId;
     const next = entries[activeId];
     next.scene.visible = true;
     restoreCamera(camera, controls, next.state);
-    if (['dappled', 'gallery', 'sketchbook'].includes(activeId)) {
+    if (['dappled', 'gallery', 'sketchbook', 'feather', 'character'].includes(activeId)) {
       worldControlsEnabled = controls.enabled;
       controls.enabled = false;
     }
@@ -267,6 +287,8 @@ export function createSceneSwitcher(gui, {
     if (activeId === 'dappled') { dappled.center(); return; }
     if (activeId === 'gallery') { gallery.center(); return; }
     if (activeId === 'sketchbook') { sketchbook.center(); return; }
+    if (activeId === 'feather') { feather.center(); return; }
+    if (activeId === 'character') { character.pauseClock(); requestRender(); return; }
     if (activeId === 'paper') paper.skipIntro();
     const entry = entries[activeId];
     entry.state = cloneState(entry.initial);
@@ -277,7 +299,7 @@ export function createSceneSwitcher(gui, {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '各场景共用页面并独立切换。场景1–6保留各自的三维视角；场景7是平面光影；场景8使用滚轮穿行花廊，重置视角可回到第一幅；场景9是可翻阅的水彩手记。';
+  note.textContent = '各场景共用页面并独立切换。场景1–6保留各自的三维视角；场景7是平面光影；场景8使用滚轮穿行花廊，重置视角可回到第一幅；场景9是可翻阅的水彩手记；场景10是邮件贴纸聚散首幕；场景11为 Character 二维字符花园，保留原始比例与指针互动。';
   folder.$children.appendChild(note);
 
   specimenScene.visible = true;
@@ -289,6 +311,8 @@ export function createSceneSwitcher(gui, {
   dappledScene.visible = false;
   galleryScene.visible = false;
   sketchbookScene.visible = false;
+  featherScene.visible = false;
+  characterScene.visible = false;
   pollen.deactivate();
   firework.deactivate();
   flower.deactivate();
@@ -297,6 +321,8 @@ export function createSceneSwitcher(gui, {
   dappled.deactivate();
   gallery.deactivate();
   sketchbook.deactivate();
+  feather.deactivate();
+  character.deactivate();
   refreshFolders();
 
   return {
@@ -314,6 +340,8 @@ export function createSceneSwitcher(gui, {
       if (activeId === 'dappled') dappled.pauseClock();
       if (activeId === 'gallery') gallery.pauseClock();
       if (activeId === 'sketchbook') sketchbook.pauseClock();
+      if (activeId === 'feather') feather.pauseClock();
+      if (activeId === 'character') character.pauseClock();
     },
     setReducedMotion(value) {
       pollen.setReducedMotion(value);
@@ -324,6 +352,8 @@ export function createSceneSwitcher(gui, {
       dappled.setReducedMotion(value);
       gallery.setReducedMotion(value);
       sketchbook.setReducedMotion(value);
+      feather.setReducedMotion(value);
+      character.setReducedMotion(value);
     },
     dispose() {
       if (disposed) return;
@@ -336,7 +366,9 @@ export function createSceneSwitcher(gui, {
       dappled.deactivate();
       gallery.deactivate();
       sketchbook.deactivate();
-      if (['dappled', 'gallery', 'sketchbook'].includes(activeId)) controls.enabled = worldControlsEnabled;
+      feather.deactivate();
+      character.deactivate();
+      if (['dappled', 'gallery', 'sketchbook', 'feather', 'character'].includes(activeId)) controls.enabled = worldControlsEnabled;
     },
   };
 }

@@ -106,6 +106,7 @@ select {
 .viewer-flower-status,
 .viewer-paper-status,
 .viewer-gallery-status,
+.viewer-character-status,
 .viewer-effect-note {
   padding: 6px 8px;
   line-height: 1.5;

@@ -1,0 +1,156 @@
+{
+  "source": "https://feather.computer/",
+  "retrieved": "2026-09-05",
+  "files": [
+    {
+      "path": "public/feather/1062-19th-st.png",
+      "url": "https://feather.computer/landing1/1062-19th-st.png",
+      "sha256": "aab289b372ec7d57a3a449dbc341bb59b93afa10d6028519bddeb6cf71a839ab",
+      "derived": false
+    },
+    {
+      "path": "public/feather/20-off-brown.png",
+      "url": "https://feather.computer/landing1/20-off-brown.png",
+      "sha256": "b6571f2f2f1dd3648a9ca160c0401ebefb55a6378cb6d1248fffc7323afecf7d",
+      "derived": false
+    },
+    {
+      "path": "public/feather/20-off-small.png",
+      "url": "https://feather.computer/landing1/20-off-small.png",
+      "sha256": "f58630aacce489d50f8a910c5b31bfe631a2e46b2cdfbf979c1b066c08fdd747",
+      "derived": false
+    },
+    {
+      "path": "public/feather/20-off-teal.png",
+      "url": "https://feather.computer/landing1/20-off-teal.png",
+      "sha256": "522ad90d1c5ab70e996035091a2424397eda7156099f293aa2d9c15a8087f8bb",
+      "derived": false
+    },
+    {
+      "path": "public/feather/2026-collection.png",
+      "url": "https://feather.computer/landing1/2026-collection.png",
+      "sha256": "eadfabb9252cf27431faa869b2184805f1540b64410564eb1e41159555157959",
+      "derived": false
+    },
+    {
+      "path": "public/feather/30-off-circle.png",
+      "url": "https://feather.computer/landing1/30-off-circle.png",
+      "sha256": "1d1abd261b17f790f77ad61736dfbee3a27be4b5e5e7bfce068b3cc760fe59dd",
+      "derived": false
+    },
+    {
+      "path": "public/feather/48-hours.png",
+      "url": "https://feather.computer/landing1/48-hours.png",
+      "sha256": "83214b022d77c5c4b0f0d2dd7c1105e3c9254d11a2ec80dff6a0822f555281c8",
+      "derived": false
+    },
+    {
+      "path": "public/feather/claim-offer.png",
+      "url": "https://feather.computer/landing1/claim-offer.png",
+      "sha256": "bc352b2c2ab2f65414206d32514bf6de05ee5a1d44b32d5d46c72a6d61b5fcc6",
+      "derived": false
+    },
+    {
+      "path": "public/feather/design-engineer.png",
+      "url": "https://feather.computer/landing1/design-engineer.png",
+      "sha256": "0c7ec8c04e7933acbb3e9c5b33e76bfe5ebd0cdfddfadbfb301f3314775e55ec",
+      "derived": false
+    },
+    {
+      "path": "public/feather/employment-doc.png",
+      "url": "https://feather.computer/landing1/employment-doc.png",
+      "sha256": "5869da2346210f3fe64faa25af4ca8d54dd2c47b9c25fbbc83d6b5aac6fc8193",
+      "derived": false
+    },
+    {
+      "path": "public/feather/free-delivery.png",
+      "url": "https://feather.computer/landing1/free-delivery.png",
+      "sha256": "5aa2bf491de1f3e873793dd090b54791f1cba3c744ff444a491c2ecdb767e27c",
+      "derived": false
+    },
+    {
+      "path": "public/feather/Gerstner-ProgrammMedium.otf",
+      "url": "https://feather.computer/fonts/Gerstner-ProgrammMedium.otf",
+      "sha256": "84b73d1b85b883924fdce1d106565e641b994ba9f7f4e2e99f20854a2aa15f05",
+      "derived": false
+    },
+    {
+      "path": "public/feather/jason-jonathan.png",
+      "url": "https://feather.computer/landing1/jason-jonathan.png",
+      "sha256": "05c2a27b19d02777f9b1a2a777fc54ae85a22f6fca5246f2bda1200f63654820",
+      "derived": false
+    },
+    {
+      "path": "public/feather/limited-time.png",
+      "url": "https://feather.computer/landing1/limited-time.png",
+      "sha256": "9985d3f96f042649f0ee132814cd6c9326041741ba4a7f6044835d255fe18a0d",
+      "derived": false
+    },
+    {
+      "path": "public/feather/login-alert.png",
+      "url": "https://feather.computer/landing1/login-alert.png",
+      "sha256": "d74b4be7ae02e2b75ae08d6869d014e1d6ea28ee4979c39f1863a4e00a0a039c",
+      "derived": false
+    },
+    {
+      "path": "public/feather/logo-v3-svg.png",
+      "url": "https://feather.computer/landing1/logo-v3-svg.png",
+      "sha256": "c29342366863fe73eccd93edd6397b134e7e7ca7cfa86d263f8ed62c559d3208",
+      "derived": false
+    },
+    {
+      "path": "public/feather/new-arrivals.png",
+      "url": "https://feather.computer/landing1/new-arrivals.png",
+      "sha256": "ebe62413fb7cda63b261c06ea3e5bf58d34fec5dae2ad49f4fe04c28cb3bf82d",
+      "derived": false
+    },
+    {
+      "path": "public/feather/new-collection.png",
+      "url": "https://feather.computer/landing1/new-collection.png",
+      "sha256": "00a8432564404801d9c78c84d7d1f03b9f1014144d60cec8c7bed05a74a884a6",
+      "derived": false
+    },
+    {
+      "path": "public/feather/order-366.png",
+      "url": "https://feather.computer/landing1/order-366.png",
+      "sha256": "1585b9b28412747caad4dc8a9822350ee31166ab5f5e8990ab1ee3c65159c634",
+      "derived": false
+    },
+    {
+      "path": "public/feather/order-a20.png",
+      "url": "https://feather.computer/landing1/order-a20.png",
+      "sha256": "1347a9550ce81371f92b9cff8d53dcc6649e4001a76de3e6a480d29e767ccbe1",
+      "derived": false
+    },
+    {
+      "path": "public/feather/owl-head-pattern.svg",
+      "url": "https://feather.computer/landing1/owl-head-pattern.svg",
+      "sha256": "5b7672508d794d5e3a335a11686cfd05b8c476aeb923298de0e9e88dffe0cf36",
+      "derived": false
+    },
+    {
+      "path": "public/feather/owl.svg",
+      "url": "https://feather.computer/",
+      "sha256": "af7d2c5ced3590c18b595ea78321c47b2ff40899910ebfe1f57b6fda1dd2e0a4",
+      "derived": true
+    },
+    {
+      "path": "public/feather/sfo-jfk.png",
+      "url": "https://feather.computer/landing1/sfo-jfk.png",
+      "sha256": "c1689d88e2bb7ec4361104c4a7c1ba3d3b7a177bbf192e7a9785bd271566e837",
+      "derived": false
+    },
+    {
+      "path": "public/feather/shop-new-season.png",
+      "url": "https://feather.computer/landing1/shop-new-season.png",
+      "sha256": "d9a003d38b4b57445f3dc02a48594a898313090962c4752f61ee83af1e9c4b90",
+      "derived": false
+    },
+    {
+      "path": "public/feather/to-katherine.png",
+      "url": "https://feather.computer/landing1/to-katherine.png",
+      "sha256": "07a1ff2303bc34de2f2949eda1467437e9c9904f720f401132cc55477d5a275e",
+      "derived": false
+    }
+  ]
+}

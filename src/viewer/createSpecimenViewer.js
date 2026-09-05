@@ -27,6 +27,8 @@ import { createButterflyScene, bindButterflyPanel } from './butterflyScene.js';
 import { createDappledLightScene, bindDappledLightPanel } from './dappledLightScene.js';
 import { createDepthGalleryScene, bindDepthGalleryPanel } from './depthGalleryScene.js';
 
+import { createCharacterScene, bindCharacterPanel } from './characterScene.js';
+import { createFeatherScene, bindFeatherPanel } from './featherScene.js';
 import { createSketchbookScene, bindSketchbookPanel } from './sketchbookScene.jsx';
 
 const MODEL_URL = '/models/specimen-frame.glb';
@@ -279,6 +281,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let dappled = null;
   let gallery = null;
   let sketchbook = null;
+  let feather = null;
+  let character = null;
   let sceneSwitcher = null;
   let disposePollenBackdrop = null;
 
@@ -309,6 +313,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
   dappledScene.name = '场景7·斑驳光影';
   const galleryScene = new THREE.Scene();
   galleryScene.name = '场景8·纵深花廊';
+  const characterScene = new THREE.Scene();
+  characterScene.name = '场景11·字符物理实验';
+  const featherScene = { visible: false };
   const sketchbookScene = { visible: false }; // DOM scene: no extra renderer or canvas.
   const camera = new THREE.PerspectiveCamera(
     40,
@@ -335,7 +342,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         if (activeSceneId !== 'butterfly') butterflyAtmosphere?.pauseClock();
         if (activeSceneId === 'specimen') depthStack?.flush();
         const cinematicCamera = activeSceneId === 'paper' && paper?.ownsCamera;
-        const screenSpace = ['dappled', 'firework', 'gallery', 'sketchbook'].includes(activeSceneId);
+        const screenSpace = ['dappled', 'firework', 'gallery', 'sketchbook', 'feather', 'character'].includes(activeSceneId);
         const parallaxAnimated = cinematicCamera || screenSpace ? false : pointerParallax?.update(timestamp) ?? false;
         if (!cinematicCamera && !screenSpace) pointerParallax?.apply();
         let atmosphereAnimated = false;
@@ -346,6 +353,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         let butterflyAnimated = false;
         let dappledAnimated = false;
         let galleryAnimated = false;
+        let characterAnimated = false;
         try {
           if (activeSceneId === 'specimen') {
             atmosphereAnimated = atmosphere.update(timestamp, !document.hidden);
@@ -374,6 +382,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
           } else if (activeSceneId === 'dappled') {
             dappledAnimated = dappled?.update(timestamp, !document.hidden) ?? false;
             dappled?.render();
+          } else if (activeSceneId === 'character') {
+            characterAnimated = character?.update(timestamp, !document.hidden) ?? false;
+            character?.render();
           } else if (activeSceneId === 'gallery') {
             galleryAnimated = gallery?.update(timestamp, !document.hidden) ?? false;
             gallery?.render();
@@ -381,7 +392,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
         } finally {
           pointerParallax?.restoreCamera();
         }
-        if (atmosphereAnimated || pollenAnimated || fireworkAnimated || flowerAnimated || paperAnimated || butterflyAnimated || dappledAnimated || galleryAnimated || parallaxAnimated) requestRender();
+        if (atmosphereAnimated || pollenAnimated || fireworkAnimated || flowerAnimated || paperAnimated || butterflyAnimated || dappledAnimated || galleryAnimated || characterAnimated || parallaxAnimated) requestRender();
       }
     });
   };
@@ -417,6 +428,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
   gallery = createDepthGalleryScene(galleryScene, renderer, requestRender, { reducedMotion: motionPreference.matches });
   gallery.setSize(container.clientWidth, container.clientHeight);
   sketchbook = createSketchbookScene(container, { reducedMotion: motionPreference.matches });
+  feather = createFeatherScene(container, { reducedMotion: motionPreference.matches });
+  character = createCharacterScene(characterScene, renderer, requestRender, { reducedMotion: motionPreference.matches });
+  character.setSize(container.clientWidth, container.clientHeight);
   fireworkPost = createFireworkPost(
     renderer,
     fireworkScene,
@@ -442,6 +456,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     dappled.pauseClock();
     gallery.pauseClock();
     sketchbook.pauseClock();
+    feather.pauseClock();
+    character.pauseClock();
     sceneSwitcher?.pauseClock();
     if (document.hidden) pointerParallax.resetInput({ immediate: true });
     if (document.hidden && renderFrame) { window.cancelAnimationFrame(renderFrame); renderFrame = 0; }
@@ -485,6 +501,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     firework?.setSize(width, height);
     dappled?.setSize(width, height);
     gallery?.setSize(width, height);
+    character?.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     requestRender();
@@ -605,6 +622,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     const dappledFolder = bindDappledLightPanel(gui, dappled, requestRender);
     const galleryFolder = bindDepthGalleryPanel(gui, gallery, requestRender);
     const sketchbookFolder = bindSketchbookPanel(gui, sketchbook);
+    const featherFolder = bindFeatherPanel(gui, feather);
+    const characterFolder = bindCharacterPanel(gui, character);
     const specimenFolders = ['深邃效果', '外框插槽管理', '内框插槽管理', '渲染设置']
       .map((title) => gui.folders.find((folder) => folder._title === title));
     sceneSwitcher = createSceneSwitcher(gui, {
@@ -628,6 +647,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
       galleryScene,
       gallery,
       sketchbookScene, sketchbook,
+      featherScene, feather,
+      characterScene, character,
       specimenFolders,
       pollenFolders: [pollenFolder],
       fireworkFolders: [fireworkFolder],
@@ -637,6 +658,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
       dappledFolders: [dappledFolder],
       galleryFolders: [galleryFolder],
       sketchbookFolders: [sketchbookFolder],
+      featherFolders: [featherFolder],
+      characterFolders: [characterFolder],
       worldFolders: ['梦境背景与迎光', '指针视差', 'HDRI 环境设置']
         .map(title => gui.folders.find(folder => folder._title === title)),
     });
@@ -655,6 +678,14 @@ export function createSpecimenViewer(container, { onError } = {}) {
     if (['firework', '3'].includes(preview)) {
       sceneSwitcher.switchTo('firework');
       fireworkFolder.open();
+    }
+    if (['character', '11'].includes(preview)) {
+      sceneSwitcher.switchTo('character');
+      characterFolder.open();
+    }
+    if (['feather', '10'].includes(preview)) {
+      sceneSwitcher.switchTo('feather');
+      featherFolder.open();
     }
     if (['sketchbook', '9'].includes(preview)) {
       sceneSwitcher.switchTo('sketchbook');
@@ -709,6 +740,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     dappled.dispose();
     gallery.dispose();
     sketchbook.dispose();
+    feather.dispose();
+    character.dispose();
     softEdges?.dispose();
     embeddedCore?.dispose();
     slices.dispose();
