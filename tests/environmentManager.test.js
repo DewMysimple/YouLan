@@ -21,6 +21,8 @@ test('white default, per-slot intensity product, background-only hiding and rota
   manager.setMaterials(slots);
   manager.parameters.intensity = 2; manager.parameters.rotation = 90; manager.apply();
   assert.deepEqual(slots.map((slot) => slot.material.envMapIntensity), [0.8, 1.6]);
+  assert.equal(scene.environmentIntensity, 2);
+  assert.equal(secondScene.environmentIntensity, 2, 'physical scenes inherit shared illumination intensity');
   await manager.loadFile(file('test.hdr'));
   const image = scene.environment;
   assert.equal(scene.background, image);

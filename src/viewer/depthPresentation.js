@@ -86,7 +86,7 @@ export function bindDepthPresentation(gui, { camera, controls, stack, fitAll, sl
     layersOnly() { physical(); if (atmosphere) atmosphere.parameters.enabled = false; Object.assign(slices.parameters, SLICE_DEFAULTS); embeddedCore.parameters.enabled = true; bloom.parameters.enabled = false; refresh(); },
     frame, fitAll,
   };
-  folder.add({ restore() { actions.restore(); void environment.loadBuiltin(); } }, 'restore').name('恢复调好的默认效果');
+  folder.add({ restore() { actions.restore(); } }, 'restore').name('恢复调好的默认效果');
   folder.add(actions, 'baseline').name('纯透射对照');
   folder.add(actions, 'layersOnly').name('仅颜色层级对照');
   folder.add(parameters, 'count', 1, DEPTH_LIMITS.count, 1).name('纵深数量').onChange(setArray);

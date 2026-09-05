@@ -9,6 +9,7 @@ import { createEnvironmentManager } from './environmentManager.js';
 import { bindEnvironmentPanel, bindSlicePanel } from './viewerPanels.js';
 import { createDepthStack } from './depthStack.js';
 import { organizeViewerPanel } from './panelOrganization.js';
+import { createParameterWorkspace } from './parameterWorkspace.js';
 import { fitArray } from './arrayModifier.js';
 import { createSliceAccumulation } from './sliceAccumulation.js';
 import { createLocalEmission } from './localEmission.js';
@@ -263,6 +264,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let disposed = false;
   let renderFrame = 0;
   let gui = null;
+  let parameterWorkspace = null;
   let loadedModel = null;
   let disposeEnvironmentPanel = null;
   let depthStack = null;
@@ -677,13 +679,13 @@ export function createSpecimenViewer(container, { onError } = {}) {
     });
     organizeViewerPanel(gui);
     gui.folders.filter(folder => !['场景选择', '深邃效果'].includes(folder._title)).forEach(folder => folder.close());
+    parameterWorkspace = createParameterWorkspace(gui, { switcher: sceneSwitcher, atmosphere, paper,
+      refreshAtmosphere: () => refreshAtmospherePanel?.(), requestRender });
     // A shareable local preview opens the requested scene without changing startup.
     const preview = resolveScene(new URLSearchParams(window.location.search).get('scene'));
     if (preview && preview !== 'opening') {
       sceneSwitcher.switchTo(preview);
       gui.folders.find(folder => folder._title === SCENE_LABELS[preview])?.open();
-    } else {
-      gui.close();
     }
     requestRender();
   };
@@ -738,6 +740,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
     slices.dispose();
     localEmission?.dispose();
     environment.dispose();
+    parameterWorkspace?.dispose();
     gui?.destroy();
 
     if (loadedModel) {

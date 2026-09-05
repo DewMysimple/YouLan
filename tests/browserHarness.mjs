@@ -83,7 +83,8 @@ export async function browserHarness(output) {
         for (const title of path) root = Array.from(root.querySelectorAll('.lil-gui')).find(el => el.querySelector(':scope > .title')?.textContent === title);
         return root;
       };
-      window.controller = (path, label) => Array.from(folder(path).querySelectorAll(':scope > .children > .controller')).find(el => el.querySelector('.name')?.textContent === label);
+      window.controller = (path, label) => Array.from(document.querySelectorAll('.controller')).find(el => el.dataset.parameterPath === JSON.stringify(path) && el.querySelector('.name')?.textContent === label)
+        || Array.from(folder(path).querySelectorAll(':scope > .children > .controller')).find(el => el.querySelector('.name')?.textContent === label);
       window.button = (path, label) => controller(path, label).querySelector('button');
       window.setControl = (path, label, value) => {
         const control = controller(path, label);

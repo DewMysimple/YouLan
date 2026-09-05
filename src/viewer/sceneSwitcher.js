@@ -227,6 +227,7 @@ export function createSceneSwitcher(gui, {
   let activeId = 'opening';
   let disposed = false;
   let controller;
+  const listeners = new Set();
   let worldControlsEnabled = controls.enabled;
 
   const status = document.createElement('div');
@@ -274,6 +275,7 @@ export function createSceneSwitcher(gui, {
     parameters.scene = next.label;
     controller?.updateDisplay();
     refreshFolders();
+    listeners.forEach(listener => listener(activeId));
     requestRender();
   }
 
@@ -331,6 +333,7 @@ export function createSceneSwitcher(gui, {
     get activeId() { return activeId; },
     get activeScene() { return entries[activeId].scene; },
     switchTo,
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     pauseClock() {
       if (activeId === 'opening') opening.pauseClock();
       if (activeId === 'pollen') pollen.pauseClock();
@@ -360,6 +363,7 @@ export function createSceneSwitcher(gui, {
     dispose() {
       if (disposed) return;
       disposed = true;
+      listeners.clear();
       opening.deactivate();
       pollen.deactivate();
       firework.deactivate();

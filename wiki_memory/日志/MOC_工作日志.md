@@ -3,7 +3,7 @@ type: moc
 status: active
 kind: process
 importance: high
-updated: 2026-09-05
+updated: 2026-09-06
 topic: work-log-index
 source_logs: []
 supersedes: null
@@ -15,6 +15,7 @@ supersedes: null
 
 | 时间 | 类型 | 目标 | 状态 | 主题 | 日志 |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-06 | feature | 用户要求场景选择与公共跨场景同名参数位于左栏，单场景详细参数位于右栏；深入排查不生效、无关参数；增加可靠默认恢复、Ctrl+Z 撤销和参数面板收起/展开。 | archived | scene-parameter-workspace | [[日志/2026-09-06-重构左右参数栏与参数撤销.md|2026-09-06｜重构左右参数栏与参数撤销]] |
 | 2026-09-05 | feature | 用户指出身体连接处仍显镂空、前翅上缘不够饱满、左右细节完全镜像，指定继续按附图调整。 | archived | butterfly-fuller-roots-and-individual-wing-patterns | [[日志/2026-09-05-补实蝶翼连接并丰富非镜像细节.md|2026-09-05｜补实蝶翼连接并丰富非镜像细节]] |
 | 2026-09-05 | feature | 场景6使用场景1背景模式及迎光光束，蝴蝶水平放置且头朝光源。 | archived | butterfly-dream-background-heading | [[日志/2026-09-05-蝶翼共享梦境背景并水平迎光.md|2026-09-05｜蝶翼共享梦境背景并水平迎光]] |
 | 2026-09-05 | feature | 用户认为原场景3过于单薄，要求结合提供的视频与指尖烟花网站深度改造；随后明确要求保留 Three.js 旋转。 | archived | scene3-painted-fireworks-orbit-audio | [[日志/2026-09-05-深度改造场景3为可旋转指尖彩色花火.md|2026-09-05｜深度改造场景3为可旋转指尖彩色花火]] |

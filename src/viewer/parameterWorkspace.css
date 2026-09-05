@@ -1,0 +1,96 @@
+.lil-gui.root.parameter-workspace, .parameter-workspace .lil-gui {
+  --background-color: #232b28;
+  --text-color: #edf1eb;
+  --title-background-color: #29332e;
+  --title-text-color: #e6ece5;
+  --widget-color: #39443d;
+  --hover-color: #46554b;
+  --focus-color: #53685a;
+  --number-color: #c6debb;
+  --string-color: #d8e6cb;
+  --font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-size: 12px;
+  --input-font-size: 12px;
+  --widget-height: 25px;
+  --padding: 8px;
+  --name-width: 54%;
+}
+.lil-gui.root.parameter-workspace {
+  position: fixed;
+  inset: 16px 16px auto !important;
+  width: auto !important;
+  max-height: none;
+  background: transparent;
+  pointer-events: none;
+  z-index: 1001;
+}
+.parameter-workspace > .title { display: none; }
+.parameter-workspace > .children {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+.parameter-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: clamp(280px, 23vw, 330px);
+  max-height: calc(100dvh - 76px);
+  background: #232b28f5;
+  border: 1px solid #7f94814a;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px #15231b30;
+  overflow: hidden;
+  pointer-events: auto;
+}
+.parameter-right { margin-left: auto; }
+.parameter-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 14px 4px; gap: 8px; }
+.parameter-header strong { font-size: 14px; font-weight: 600; letter-spacing: .02em; }
+.parameter-subtitle { margin: 4px 14px 12px; color: #aebdaf; font-size: 11px; line-height: 1.6; }
+.parameter-tools { display: flex; gap: 5px; padding: 0 12px 12px; flex-wrap: wrap; }
+.parameter-workspace button { cursor: pointer; }
+.parameter-header button, .parameter-tools button, .parameter-handles button {
+  width: auto; height: auto; margin: 0; flex: 0 0 auto;
+  border: 1px solid #6c826f66; border-radius: 5px; padding: 6px 9px;
+  background: #334138; color: #edf1eb; font: inherit; line-height: 1.35;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.parameter-header button { border-color: transparent; background: transparent; color: #c0cdbd; }
+.parameter-header strong { flex: 1; min-width: 0; }
+.parameter-workspace .controller[data-parameter-key="scene"] { flex-direction: column; align-items: stretch; }
+.parameter-workspace .controller[data-parameter-key="scene"] > .name { width: auto; padding-bottom: 6px; }
+.parameter-workspace .controller[data-parameter-key="scene"] .widget { width: 100%; }
+.parameter-workspace button:hover { background-color: #46594a; }
+.parameter-workspace button:active { background-color: #526a56; }
+.parameter-workspace button:disabled { opacity: .35; cursor: default; }
+.parameter-workspace :focus-visible { outline: 2px solid #d9eab9; outline-offset: -2px; }
+.parameter-body { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #687b69 transparent; padding: 0 5px 8px; }
+.parameter-body > .lil-gui { border-top: 1px solid #8a9b8926; }
+.parameter-body > .lil-gui > .title { padding-top: 8px; padding-bottom: 8px; }
+.parameter-workspace .controller { padding-top: 4px; padding-bottom: 4px; }
+.parameter-workspace .controller > .name { line-height: 1.5; padding-top: 3px; white-space: normal; }
+.parameter-workspace .controller.option select { text-overflow: ellipsis; }
+.parameter-workspace .viewer-panel-section { color: #9db594; font-size: 11px; padding-top: 13px; }
+.parameter-workspace .viewer-scene-status { color: #b9cdb1; }
+.parameter-scope { color: #aebdaf; font-size: 11px; line-height: 1.6; margin: 8px; }
+.parameter-history-status { margin: 0; padding: 9px 14px; border-top: 1px solid #8a9b8926; color: #b3c3ad; font-size: 11px; line-height: 1.6; }
+.parameter-workspace [hidden], .parameter-workspace .parameter-unavailable { display: none !important; }
+.parameter-workspace .parameter-inactive > .widget { opacity: .35; }
+.parameter-workspace .parameter-inactive { flex-wrap: wrap; }
+.parameter-workspace .parameter-inactive::after { content: attr(data-inactive-reason); display: block; flex-basis: 100%; color: #aab6a6; font-size: 10px; }
+.parameter-handles { position: absolute; inset: 0; pointer-events: none; }
+.parameter-handles button { position: fixed; pointer-events: auto; box-shadow: 0 4px 15px #15231b26; }
+.parameter-open-left { left: 16px; top: 16px; }
+.parameter-open-right { right: 16px; top: 16px; }
+.parameter-toggle-all { right: 16px; bottom: 16px; }
+@media (max-width: 719px) {
+  .lil-gui.root.parameter-workspace { inset: 10px 10px auto !important; }
+  .parameter-sidebar { width: min(330px, calc(100vw - 20px)); max-height: calc(100dvh - 100px); }
+  .parameter-right { position: absolute; right: 0; }
+  .parameter-open-left { top: auto; bottom: 16px; left: 10px; }
+  .parameter-open-right { top: auto; bottom: 54px; right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .parameter-workspace button { transition: none; } }

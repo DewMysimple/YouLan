@@ -18,7 +18,7 @@ export function createOpeningScene(container, requestRender, { reducedMotion = f
   const button = host.querySelector('.opening-enter'), title = button.querySelector('img');
   const cursor = host.querySelector('.opening-cursor'), error = host.querySelector('.opening-error');
   let active = false, disposed = false, loaded = false, hovered = false, hover = 0, previous = null;
-  let width = 1, height = 1, pointer = null, generation = 0, panelWasClosed = false;
+  let width = 1, height = 1, pointer = null, generation = 0;
   let refresh = () => {}, publishedStage = null, entryHover = 0;
   const awake = () => active && !document.hidden && !disposed;
 
@@ -96,15 +96,11 @@ export function createOpeningScene(container, requestRender, { reducedMotion = f
     configure() { resize(); requestRender(); },
     activate() {
       if (disposed) return; active = true; host.hidden = false; container.classList.add('has-opening');
-      const gui = document.querySelector('.lil-gui.root'); panelWasClosed = gui?.classList.contains('closed') ?? false;
-      if (gui && !panelWasClosed) gui.querySelector(':scope > .title')?.click();
       motion.pause(); previous = null; resize(); if (!loaded) load(); requestRender();
     },
     deactivate() {
       if (!active) return; active = false; host.hidden = true; container.classList.remove('has-opening');
       motion.pause(); previous = null; pointer = null; hovered = false;
-      const gui = document.querySelector('.lil-gui.root');
-      if (!panelWasClosed && gui?.classList.contains('closed')) gui.querySelector(':scope > .title')?.click();
     },
     pauseClock() { motion.pause(); previous = null; pointer = null; hovered = false; },
     setReducedMotion(value) { reducedMotion = value; motion.pause(); if (awake()) requestRender(); },

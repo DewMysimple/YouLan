@@ -8,7 +8,7 @@ export function createSketchbookScene(container, { reducedMotion = false } = {})
   const host = document.createElement('div');
   host.className = 'viewer-sketchbook'; host.hidden = true;
   container.append(host);
-  let root, frame, active = false, disposed = false, panelWasClosed = false;
+  let root, frame, active = false, disposed = false;
   const parameters = { tilt: .65, magnify: 2.3, wash: .72 };
   const api = () => frame?.contentWindow?.sketchbookScene;
   function configure() { api()?.configure(parameters); }
@@ -29,10 +29,6 @@ export function createSketchbookScene(container, { reducedMotion = false } = {})
       if (disposed) return;
       active = true; host.hidden = false;
       container.classList.add('has-sketchbook');
-      const gui = document.querySelector('.lil-gui.root');
-      panelWasClosed = gui?.classList.contains('closed') ?? false;
-      // Keep the native panel reachable while giving the book its full page.
-      if (gui && !panelWasClosed) gui.querySelector(':scope > .title')?.click();
       if (!root) {
         root = createRoot(host);
         root.render(<MengToSketchbookLandingPage headingFont="instrument-serif" bodyFont="newsreader"
@@ -43,8 +39,6 @@ export function createSketchbookScene(container, { reducedMotion = false } = {})
     },
     deactivate() {
       active = false; api()?.setActive(false); host.hidden = true; container.classList.remove('has-sketchbook');
-      const gui = document.querySelector('.lil-gui.root');
-      if (!panelWasClosed && gui?.classList.contains('closed')) gui.querySelector(':scope > .title')?.click();
     },
     center() { api()?.reset(); },
     next() { api()?.next(); }, previous() { api()?.previous(); },

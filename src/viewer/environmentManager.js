@@ -94,6 +94,9 @@ export function createEnvironmentManager(sceneOrScenes, requestRender, {
     const texture = image ?? white;
     for (const scene of scenes) {
       scene.environment = texture;
+      // Materials with explicit envMap are multiplied below; other physical
+      // scenes inherit this shared intensity through scene.environment.
+      scene.environmentIntensity = parameters.intensity;
       scene.background = image && parameters.showBackground ? image : background;
       scene.backgroundIntensity = parameters.brightness;
       scene.backgroundBlurriness = parameters.blur;

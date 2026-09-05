@@ -387,6 +387,7 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
     flow.addColor(p, 'cream').name('颜色2 · 混合色'),
     flow.addColor(p, 'lavender').name('颜色3 · 覆盖色'),
   ];
+  palette.historyDerived = true; // Its three stored colors are the authoritative state.
   function refreshColors() {
     paletteState.palette = Object.keys(FLOW_PALETTES).find(name =>
       Object.entries(FLOW_PALETTES[name]).every(([key, color]) => p[key].toLowerCase() === color)) ?? '自定义';

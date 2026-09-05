@@ -14,7 +14,7 @@ export function createFeatherScene(container, { reducedMotion = false } = {}) {
   container.append(host);
   const parameters = { ...DEFAULTS };
   const animations = new Map();
-  let mounted = false, active = false, disposed = false, panelWasClosed = false;
+  let mounted = false, active = false, disposed = false;
   let button, owl, error, images = [], layout = [];
   let hovered = false, pinned = false, focused = false, gathered = false;
   let timer = null, previewIndex = -1, revision = 0;
@@ -192,9 +192,6 @@ export function createFeatherScene(container, { reducedMotion = false } = {}) {
     activate() {
       if (disposed || active) return;
       active = true; host.hidden = false; container.classList.add('has-feather');
-      const gui = document.querySelector('.lil-gui.root');
-      panelWasClosed = gui?.classList.contains('closed') ?? false;
-      if (gui && !panelWasClosed) gui.querySelector(':scope > .title')?.click();
       mount(); configure();
     },
     deactivate() {
@@ -202,8 +199,6 @@ export function createFeatherScene(container, { reducedMotion = false } = {}) {
       center(); active = false; revision++; clearTimer();
       images.forEach((_, index) => cancelAnimation(index));
       host.hidden = true; container.classList.remove('has-feather');
-      const gui = document.querySelector('.lil-gui.root');
-      if (!panelWasClosed && gui?.classList.contains('closed')) gui.querySelector(':scope > .title')?.click();
     },
     pauseClock() {
       if (!mounted) return;

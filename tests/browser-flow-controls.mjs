@@ -29,6 +29,7 @@ try {
     folder(${JSON.stringify(flow)}).classList.remove('closed');
     folder(['场景7·蝶翼']).classList.add('closed');void 0;`);
   await pixels('01-default-panel.png');
+  await b.evaluate(`document.querySelector('.parameter-toggle-all')?.click()`);
   // Freeze the background and isolate it from the solar glare to compare actual pixels.
   await b.set(dream, '尽头亮心强度', 0);
   const baseline = await pixels();
@@ -93,6 +94,7 @@ try {
   await b.set(['场景选择'],'当前场景','场景7·蝶翼');
   await b.set(dream,'背景流动',false);
   await b.evaluate(`folder(['梦境背景与迎光']).scrollIntoView();void 0;`);
+  await b.evaluate(`document.querySelector('.parameter-toggle-all')?.click()`);
   await pixels('05-final-panel.png');
   assert.equal(b.errors.length,0,JSON.stringify(b.errors));
   report.errors=b.errors;report.resetAndIdle=true;report.resources=initialMemory;
