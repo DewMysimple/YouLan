@@ -1,8 +1,17 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
+const FLOW_PALETTES = Object.freeze({
+  '粉彩 · 粉黄紫': Object.freeze({ pink: '#ffb9e7', cream: '#fff19b', lavender: '#b787f5' }),
+  '绿茵 · 林间晴光': Object.freeze({ pink: '#83bf65', cream: '#fff6b0', lavender: '#65b7a2' }),
+  '绿茵 · 晨露薄荷': Object.freeze({ pink: '#a2ce83', cream: '#f5f5ce', lavender: '#72b8a2' }),
+  '绿茵 · 青溪水光': Object.freeze({ pink: '#6dbb82', cream: '#d8edab', lavender: '#429c9a' }),
+  '绿茵 · 午后草甸': Object.freeze({ pink: '#76ad45', cream: '#f4e88b', lavender: '#4c9865' }),
+  '绿茵 · 幽林萤光': Object.freeze({ pink: '#376947', cream: '#dce99b', lavender: '#286b64' }),
+});
+
 export const FLOW_DEFAULTS = Object.freeze({
-  cream: '#fff19b', pink: '#ffb9e7', lavender: '#b787f5',
+  ...FLOW_PALETTES['粉彩 · 粉黄紫'],
   colorBalance: 0, lavenderAmount: .92, blockSize: 1, distortion: .85,
   softness: 1, patternSeed: 0, streakStrength: 1, streakCount: 6, streakRotation: 0,
   maskPreview: '关闭',
@@ -364,9 +373,27 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   const speed = folder.add(p, 'speed', 0, 2, .01).name('流动速度').onChange(update);
   const brightness = folder.add(p, 'backgroundStrength', .2, 3, .01).name('混色背景亮度').onChange(requestRender);
   const flow = folder.addFolder('流动混色个性化');
-  flow.addColor(p, 'pink').name('颜色1 · 底色').onChange(requestRender);
-  flow.addColor(p, 'cream').name('颜色2 · 混合色').onChange(requestRender);
-  flow.addColor(p, 'lavender').name('颜色3 · 覆盖色').onChange(requestRender);
+  // The selection describes the current colors, never becomes a shader uniform.
+  const paletteState = { palette: '' };
+  const palette = flow.add(paletteState, 'palette', [...Object.keys(FLOW_PALETTES), '自定义'])
+    .name('配色方案').onChange(name => {
+      const colors = FLOW_PALETTES[name];
+      if (colors) Object.assign(p, colors);
+      refreshColors();
+      requestRender();
+    });
+  const colorControllers = [
+    flow.addColor(p, 'pink').name('颜色1 · 底色'),
+    flow.addColor(p, 'cream').name('颜色2 · 混合色'),
+    flow.addColor(p, 'lavender').name('颜色3 · 覆盖色'),
+  ];
+  function refreshColors() {
+    paletteState.palette = Object.keys(FLOW_PALETTES).find(name =>
+      Object.entries(FLOW_PALETTES[name]).every(([key, color]) => p[key].toLowerCase() === color)) ?? '自定义';
+    palette.updateDisplay();
+    colorControllers.forEach(controller => controller.updateDisplay());
+  }
+  colorControllers.forEach(controller => controller.onChange(() => { refreshColors(); requestRender(); }));
   flow.add(p, 'colorBalance', -.5, .5, .01).name('颜色2占比偏移').onChange(requestRender);
   flow.add(p, 'lavenderAmount', 0, 1, .01).name('颜色3覆盖强度').onChange(requestRender);
   flow.add(p, 'blockSize', .25, 4, .01).name('色块大小').onChange(requestRender);
@@ -380,6 +407,7 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   flow.add({ reset() { atmosphere.restoreFlow(); folder.controllersRecursive().forEach(c => c.updateDisplay()); update(); } }, 'reset').name('恢复混色默认');
   const flowNote = document.createElement('div'); flowNote.className = 'viewer-effect-note';
   flowNote.textContent = '配色与图案由场景2、3、7共享。占比偏移为正时增加颜色2，为负时增加底色；色块越大越舒展。没有外部遮罩图片；灰度预览显示实时生成的混色权重，白色表示该颜色占比高。色带跟随迎光，仅在场景2、7太阳可见时出现；预览保留场景模型与迎光。恢复混色默认只重置本组，刷新恢复全部默认。';
+  flowNote.textContent = '配色方案只切换三种颜色，保留当前图案、速度与光照。粉彩为原粉黄紫配色；五套绿茵中，林间晴光偏暖黄，晨露薄荷轻柔，青溪水光偏水青，午后草甸偏草绿，幽林萤光深绿明暗更强。手动改色后显示“自定义”，仍可随时选择预设。' + flowNote.textContent;
   const flowHelp = document.createElement('details'); flowHelp.className = 'viewer-panel-help';
   const flowSummary = document.createElement('summary'); flowSummary.textContent = '配色与遮罩说明';
   flowHelp.append(flowSummary, flowNote); flow.$children.appendChild(flowHelp);
@@ -398,7 +426,7 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。太阳接近画面边缘时，光束按渐隐范围平滑变化；快速移入移出时再按过渡时长柔和追随，0 秒可恢复即时切换。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
   note.textContent += ' 模型遮挡来自实时渲染的切片覆盖纹理，场景2专用；影响为1时按模型衰减迎光，0时忽略遮挡。场景7不使用这张纹理。';
   folder.$children.appendChild(note);
-  function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); flow.controllersRecursive().forEach(c => c.enable(moving)); distance.enable(p.sunMode === '有限距离'); }
+  function refresh() { refreshColors(); const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); flow.controllersRecursive().forEach(c => c.enable(moving)); distance.enable(p.sunMode === '有限距离'); }
   atmosphere.onPanelRefresh(refresh);
   refresh();
   return refresh;

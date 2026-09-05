@@ -30,6 +30,7 @@ supersedes: null
 | 2026-09-05 | feature | 将用户指定的桌面 Character 工程接入幽兰，编号必须是场景11。 | archived | character-scene11-integration | [[日志/2026-09-05-将Character接入场景11.md|2026-09-05｜将Character接入场景11]] |
 | 2026-09-05 | feature | 用户指定参考 `https://feather.computer/`、本地 `PixPin_2026-09-05_20-10-16.mp4` 及截图，在下一个场景复刻第一幕；明确不要之后的内容。 | archived | scene10-feather-first-viewport | [[日志/2026-09-05-复刻Feather邮件贴纸首幕场景10.md|2026-09-05｜复刻Feather邮件贴纸首幕场景10]] |
 | 2026-09-05 | feature | 正式展示星球场景前，画面只有一架纸飞机，相机跟随其飞行，再带出星球和机群。 | archived | paper-plane-camera-intro | [[日志/2026-09-05-增加纸飞机跟随入场镜头.md|2026-09-05｜增加纸飞机跟随入场镜头]] |
+| 2026-09-05 | feature | 用户指定把原粉黄紫三色作为一个配色方案，并参考林间绿光、水光图片新增绿茵方案；随后要求多套绿茵可选。 | archived | green-flow-palettes | [[日志/2026-09-05-增加五套绿茵流动混色方案.md|2026-09-05｜增加五套绿茵流动混色方案]] |
 | 2026-09-05 | bug | 用户从沿身体纵轴的端面视角指出扇翅时翅膀脱离身体，要求固定轴连接。 | archived | butterfly-embedded-fixed-wing-axis | [[日志/2026-09-05-修复蝶翼外置旋转轴导致脱离身体.md|2026-09-05｜修复蝶翼外置旋转轴导致脱离身体]] |
 | 2026-09-05 | feature | 用户指出场景5入场的渐变背景与飞机相对镜头运动太平淡，要求参考场景1的标本纵深感觉，加入云和少量太阳效果，丰富天空与跟飞体验。 | archived | paper-plane-cloud-sky-chase-motion | [[日志/2026-09-05-丰富纸飞机云层阳光与跟飞动势.md|2026-09-05｜丰富纸飞机云层阳光与跟飞动势]] |
 | 2026-09-04 | discussion | - | archived | retain-hdri-after-removal-audit | [[日志/2026-09-04-评估HDRI移除并决定保留.md|2026-09-04｜评估 HDRI 移除并决定保留]] |
