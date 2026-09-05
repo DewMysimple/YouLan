@@ -63,6 +63,14 @@ try {
     await b.evaluate(`poseMixer.setTime(${time});__renderer.render(bf,__camera);`);
     await b.screenshot(label+'.png');
   }
+  const savedCamera=await b.evaluate('({p:__camera.position.toArray(),q:__camera.quaternion.toArray(),up:__camera.up.toArray()})');
+  for(const [time,label] of [[.2,'07-end-on-upstroke'],[.4,'08-end-on-midstroke'],[.6,'09-end-on-downstroke']]){
+    await b.evaluate(`__camera.up.set(0,0,1);__camera.position.set(0,6,.35);__camera.lookAt(0,.15,.55);
+      poseMixer.setTime(${time});__renderer.render(bf,__camera);`);
+    await b.screenshot(label+'.png');
+  }
+  await b.evaluate(`__camera.up.fromArray(${JSON.stringify(savedCamera.up)});__camera.position.fromArray(${JSON.stringify(savedCamera.p)});__camera.quaternion.fromArray(${JSON.stringify(savedCamera.q)});`);
+  report.endOnAttachmentPoses=true;
   await b.evaluate('poseMixer.stopAllAction();poseMixer.uncacheRoot(bf.getObjectByName("Butterfly"));delete window.poseMixer;');
   await b.click(select,'重置当前场景视角');
   report.extremePoses=true;

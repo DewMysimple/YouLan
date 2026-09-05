@@ -224,8 +224,10 @@ materials={(back,sign):wing_material(back,sign) for back in (False,True) for sig
 def wing(name,outline,sign,back):
     pivot=bpy.data.objects.new(name+'Pivot',None);bpy.context.collection.objects.link(pivot)
     pivot.parent=root
-    # The proximal membrane seats under the shoulder; distal wings clear the body.
-    pivot.location=B((sign*.160,.15,.022))
+    # Put the rotation axis INSIDE the shoulder. Rebase the mesh by the inverse
+    # offset so the approved spread silhouette stays exactly where it was.
+    # Extending a membrane toward an external pivot only hid detachment at rest.
+    pivot.location=B((sign*.078,.15,.022))
     nr,na=22,180;origin=Vector((.018,-.055 if back else .04))
     verts=[];uvs=[];faces=[]
     mat,(xmin,xmax,ymin,ymax)=materials[(back,sign)]
@@ -241,7 +243,7 @@ def wing(name,outline,sign,back):
             # Overlapping silhouettes, disjoint depth slabs. The separation is in
             # hinge-local geometry, so it rotates with the wings even when folded.
             z=(0 if back else .022)+.006*math.sin(math.pi*t)**2
-            verts.append(B((sign*p.x,p.y,z)))
+            verts.append(B((sign*(p.x+.082),p.y,z)))
             uvs.append(((p.x-xmin)/(xmax-xmin),(p.y-ymin)/(ymax-ymin)))
     for r in range(nr):
         for j in range(na):

@@ -72,7 +72,16 @@ test('broad roots join the body while overlapping wing surfaces stay separated t
   assert.ok(body.max.x<.14&&body.min.x>-.14,'slender body including down');
   for(const wing of wings)wing.parent.quaternion.identity();
   const mixer=new THREE.AnimationMixer(scene),action=mixer.clipAction(animations[0]).play();
-  const p=new THREE.Vector3();let minimumClearance=Infinity;
+  const p=new THREE.Vector3();
+  const bodyRadius=Math.hypot(Math.max(Math.abs(body.min.x),body.max.x),Math.max(Math.abs(body.min.z),body.max.z));
+  const sockets=[];scene.traverse(o=>{if(o.name.startsWith('WingSocket'))sockets.push(o);});
+  assert.equal(sockets.length,2);
+  const anchors=wings.map(w=>w.parent.getWorldPosition(new THREE.Vector3()));
+  const inverses=wings.map(w=>{
+    const sign=Math.sign(w.parent.position.x),socket=sockets.find(s=>Math.sign(s.position.x)===sign);
+    return socket.matrixWorld.clone().invert();
+  });
+  const local=new THREE.Vector3();
   mixer.setTime(0);action.setEffectiveWeight(0);mixer.update(0);scene.updateMatrixWorld(true);
   const ray=new THREE.Raycaster();
   for(const sign of [-1,1])for(let x=.05;x<1.65;x+=.025){
@@ -88,32 +97,35 @@ test('broad roots join the body while overlapping wing surfaces stay separated t
     action.setEffectiveWeight(weight);
     for(let i=0;i<=120;i++){
       mixer.setTime(i*.8/120);scene.updateMatrixWorld(true);
-      const bounds=wings.map(w=>{
+      const bounds=wings.map((w,wingIndex)=>{
         const b=new THREE.Box3(),a=w.geometry.attributes.position;
+        assert.ok(w.parent.getWorldPosition(p).distanceTo(anchors[wingIndex])<1e-7,'wing rotation axis is fixed relative to the body');
+        // Blender's socket is a unit sphere with its ellipsoid scale in matrixWorld.
+        assert.ok(p.clone().applyMatrix4(inverses[wingIndex]).length()<.9,'axis remains inside the shoulder');
         // Each side has its own rotating separation normal.
         const n=new THREE.Vector3(0,0,1).applyQuaternion(w.parent.getWorldQuaternion(new THREE.Quaternion()));
-        let lo=Infinity,hi=-Infinity;
+        let lo=Infinity,hi=-Infinity,embedded=0;
         for(let j=0;j<a.count;j++){
           p.fromBufferAttribute(a,j);
           // The proximal membrane intentionally seats in the shoulder; only
           // distal free wing surfaces must stay outside the central body envelope.
           const distal=Math.abs(p.x)>.22;
-          p.applyMatrix4(w.matrixWorld);if(distal)b.expandByPoint(p);
+          p.applyMatrix4(w.matrixWorld);if(distal){
+            b.expandByPoint(p);
+            assert.ok(Math.hypot(p.x,p.z)>bodyRadius,'free wing clears the body in three dimensions');
+          }
+          if(local.copy(p).applyMatrix4(inverses[wingIndex]).lengthSq()<.95**2)embedded++;
           const d=p.dot(n);lo=Math.min(lo,d);hi=Math.max(hi,d);
         }
+        assert.ok(embedded>=8,`actual root membrane stays embedded in shoulder: wing ${w.name}, weight ${weight}, frame ${i}, vertices ${embedded}`);
         b.slab={lo,hi};return b;
       });
       for(const j of [0,1]){
         assert.ok(bounds[j].slab.lo-bounds[j+2].slab.hi>.015,'overlapping wings remain in disjoint rotating depth slabs');
-        const gap=j===0?body.min.x-Math.max(bounds[0].max.x,bounds[2].max.x)
-          :Math.min(bounds[1].min.x,bounds[3].min.x)-body.max.x;
-        minimumClearance=Math.min(minimumClearance,gap);
-        assert.ok(gap>.001,`body clearance ${gap}, weight ${weight}, sample ${i}, body x ${body.max.x}`);
       }
     }
   }
   mixer.stopAllAction();mixer.uncacheRoot(scene);
-  assert.ok(minimumClearance>.001);
 });
 
 test('butterfly scene owns and releases its geometry/materials without disposing a shared environment', () => {
