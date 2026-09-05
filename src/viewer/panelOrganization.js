@@ -19,7 +19,7 @@ export function organizeViewerPanel(gui) {
     '梦境背景与迎光': [
       ['背景', ['启用梦境效果', '背景模式', '背景流动', '流动速度', '混色背景亮度']],
       ['远端亮心', ['亮心距离模式', '尽头亮心强度', '亮心半径', '亮心距末层']],
-      ['迎光', ['迎光放射强度', '亮心柔晕', '光束扩散范围', '边缘渐隐范围（%）', '显隐过渡时长（秒）', '紫色层级保护']],
+      ['迎光', ['迎光放射强度', '亮心柔晕', '光束扩散范围', '边缘渐隐范围（%）', '显隐过渡时长（秒）', '紫色层级保护', '模型遮挡影响（场景1）']],
     ],
     '指针视差': [
       ['视角跟随', ['启用指针视差', '视差幅度（°）', '垂直响应比例', '跟随缓动（秒）']],
@@ -87,6 +87,9 @@ export function organizeViewerPanel(gui) {
         const controller = folder.controllers.find(c => c._name === label);
         if (!controller) throw new Error(`面板参数未找到：${title} / ${label}`);
         folder.$children.appendChild(controller.domElement);
+      }
+      if (title === '梦境背景与迎光' && name === '背景') {
+        folder.$children.appendChild(folder.folders.find(f => f._title === '流动混色个性化').domElement);
       }
       if (title === '深邃效果' && name === '纵深与取景') {
         folder.$children.appendChild(folder.$children.querySelector('.viewer-panel-status'));

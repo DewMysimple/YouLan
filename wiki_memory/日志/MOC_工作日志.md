@@ -23,6 +23,7 @@ supersedes: null
 | 2026-09-05 | feature | 用户指定把本机 `codrops-depth-gallery` 加到下一个场景，并做适配性参数调整。 | archived | scene8-codrops-depth-gallery | [[日志/2026-09-05-接入Codrops纵深花廊场景8.md|2026-09-05｜接入Codrops纵深花廊场景8]] |
 | 2026-09-05 | feature | 用户指定按参考图的奶白、玫瑰红斑纹与轮廓重做场景6蝴蝶，缩细并精细化身体，修正扇翅穿模、增加上翻幅度，保留飞行节奏。 | archived | ivory-rose-butterfly-continuous-wing-junction | [[日志/2026-09-05-按参考重做玫瑰蝶并修复翅膀衔接.md|2026-09-05｜按参考重做玫瑰蝶并修复翅膀衔接]] |
 | 2026-09-05 | feature | - | archived | rebuild-independent-petal-bloom-and-flight | [[日志/2026-09-05-按参考工程重构逐瓣绽放与脱落飘散.md|2026-09-05｜按参考工程重构逐瓣绽放与脱落飘散]] |
+| 2026-09-05 | feature | 在控制面板开放流动混色的颜色等个性化参数，说明遮罩来源并开放相关控制。 | archived | flowing-background-personalization | [[日志/2026-09-05-开放流动混色配色与程序遮罩控制.md|2026-09-05｜开放流动混色配色与程序遮罩控制]] |
 | 2026-09-05 | feature | 用户指定建模一只蝴蝶，并在下一个场景展示翅膀扇动动画。 | archived | butterfly-model-wingbeat-scene | [[日志/2026-09-05-建模蝴蝶并新增扇翅动画场景.md|2026-09-05｜建模蝴蝶并新增扇翅动画场景]] |
 | 2026-09-05 | feature | 正式展示星球场景前，画面只有一架纸飞机，相机跟随其飞行，再带出星球和机群。 | archived | paper-plane-camera-intro | [[日志/2026-09-05-增加纸飞机跟随入场镜头.md|2026-09-05｜增加纸飞机跟随入场镜头]] |
 | 2026-09-05 | bug | 用户从沿身体纵轴的端面视角指出扇翅时翅膀脱离身体，要求固定轴连接。 | archived | butterfly-embedded-fixed-wing-axis | [[日志/2026-09-05-修复蝶翼外置旋转轴导致脱离身体.md|2026-09-05｜修复蝶翼外置旋转轴导致脱离身体]] |

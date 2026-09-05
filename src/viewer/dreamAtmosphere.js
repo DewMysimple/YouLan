@@ -1,10 +1,18 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
+export const FLOW_DEFAULTS = Object.freeze({
+  cream: '#fff19b', pink: '#ffb9e7', lavender: '#b787f5',
+  colorBalance: 0, lavenderAmount: .92, blockSize: 1, distortion: .85,
+  softness: 1, patternSeed: 0, streakStrength: 1, streakCount: 6, streakRotation: 0,
+  maskPreview: '关闭',
+});
+
 export const ATMOSPHERE_DEFAULTS = Object.freeze({
+  ...FLOW_DEFAULTS,
   enabled: true, background: '流动混色', animated: true, speed: 0.18,
   backgroundStrength: 1.9, sunIntensity: 40, sunRadius: 0.6, distance: 12, sunMode: '无限远（太阳）',
-  rays: 0.65, halo: 0.4, spread: 0.8, edgeFade: 6, transitionTime: 0.45, protection: 0.72,
+  rays: 0.65, halo: 0.4, spread: 0.8, edgeFade: 6, transitionTime: 0.45, protection: 0.72, occlusionStrength: 1,
 });
 
 // View-dependent art direction, not a volumetric scattering equation. The
@@ -50,29 +58,34 @@ varying vec2 vUv;
 uniform mat4 inverseProjection, cameraWorld;
 uniform float brightness;
 uniform vec3 cream, pink, lavender;
+uniform float colorBalance, lavenderAmount, blockSize, distortion, softness, patternSeed;
+uniform float streakStrength, streakCount, streakRotation, maskPreview;
 ${SUN_COMPOSITE_DECLARATIONS}
 void main(){
  vec4 ray=inverseProjection*vec4(vUv*2.-1.,1.,1.);
  vec3 d=normalize(mat3(cameraWorld)*ray.xyz);
- vec3 p=d*3.2+vec3(dreamTime*.05,dreamTime*.018,0.);
- p+=vec3(softNoise(p+2.),softNoise(p+9.),softNoise(p-4.))*.85;
+ vec3 p=d*3.2/max(blockSize,.1)+vec3(dreamTime*.05,dreamTime*.018,0.)+patternSeed*vec3(1.37,3.19,2.71);
+ p+=vec3(softNoise(p+2.),softNoise(p+9.),softNoise(p-4.))*distortion;
  float a=softNoise(p*1.6+vec3(0.,0.,dreamTime*.035));
  float b=softNoise(p*1.9+vec3(7.,3.,-dreamTime*.026));
- vec3 color=mix(pink,cream,smoothstep(.32,.62,a));
- color=mix(color,lavender,smoothstep(.44,.7,b)*.92);
+ float maskA=smoothstep(.47-.15*softness,.47+.15*softness,a+colorBalance);
+ float maskB=smoothstep(.57-.13*softness,.57+.13*softness,b)*lavenderAmount;
+ vec3 color=mix(pink,cream,maskA);
+ color=mix(color,lavender,maskB);
  // The pastel reference contains colored streaks, not only white scatter.
  // Directional domain stretching of the sky is an artistic companion to the
  // solar glare, and is rendered INSIDE the transmission scene, not as CSS.
  vec2 delta=(vUv-dreamSunUv)*vec2(dreamAspect,1.);
- float angle=atan(delta.y,delta.x);
- float bands=.5+.5*sin(angle*6.+.45*sin(angle*3.)+.2*softNoise(vec3(delta*2.,dreamTime*.02)));
+ float angle=atan(delta.y,delta.x)+streakRotation;
+ float bands=.5+.5*sin(angle*streakCount+.45*sin(angle*3.)+.2*softNoise(vec3(delta*2.,dreamTime*.02)));
  vec3 streakColor=mix(lavender,cream,smoothstep(.18,.82,bands));
  streakColor=mix(streakColor,pink,.22);
  vec3 lightVisibility=dreamTransmittance(dreamSunUv);
  float visible=smoothstep(0.,.05,max(max(lightVisibility.r,lightVisibility.g),lightVisibility.b));
- float facing=dreamGate*visible*min(dreamOptics.y,1.4)*.63*(1.-exp(-length(delta)*14.));
+ float facing=clamp(dreamGate*visible*min(dreamOptics.y,1.4)*.63*(1.-exp(-length(delta)*14.))*streakStrength,0.,1.);
  color=mix(color,streakColor,facing);
  gl_FragColor=vec4(color*brightness,1.);
+ if(maskPreview>.5){gl_FragColor=vec4(vec3(maskPreview<1.5?maskA:maskB),1.);return;}
  #include <tonemapping_fragment>
  #include <colorspace_fragment>
 }`;
@@ -88,7 +101,7 @@ uniform vec4 dreamOptics;
 uniform vec3 dreamTintOuter, dreamTintInner;
 uniform vec2 dreamBlocking;
 uniform vec3 dreamAccumulation;
-uniform float dreamGate, dreamAspect, dreamRadius, dreamTime, dreamProtection;
+uniform float dreamGate, dreamAspect, dreamRadius, dreamTime, dreamProtection, dreamOcclusion;
 ${noise}
 vec3 dreamTransmittance(vec2 uv){
  if(!dreamHasCounts || any(lessThan(uv,vec2(0.))) || any(greaterThan(uv,vec2(1.))))return vec3(1.);
@@ -98,7 +111,7 @@ vec3 dreamTransmittance(vec2 uv){
  vec2 path=min(count,1.)+extra*dreamAccumulation.x;
  // Opaque glass settings really block the source, independently of tint.
  float blocking=exp(-dot(min(count,vec2(256.)),dreamBlocking));
- return exp(-dreamTintOuter*path.x-dreamTintInner*path.y)*blocking;
+ return mix(vec3(1.),exp(-dreamTintOuter*path.x-dreamTintInner*path.y)*blocking,dreamOcclusion);
 }
 vec3 dreamGlare(vec2 uv){
  if(!dreamActive || dreamGate<.00001)return vec3(0.);
@@ -117,7 +130,7 @@ vec3 dreamGlare(vec2 uv){
  // Spread changes the reach of the rays, never whether an on-screen sun emits them.
  float falloff=exp(-r*1.55*(.8/max(dreamOptics.w,.01)))*(1.-exp(-r*34.));
  float coverage=dreamHasCounts?smoothstep(0.,1.,texture2D(dreamCounts,uv).g):0.;
- float protect=1.-dreamProtection*coverage;
+ float protect=1.-dreamProtection*coverage*dreamOcclusion;
  vec3 rays=mix(vec3(.82,.64,1.),vec3(1.,.9,.65),bands)*bands*wisps*falloff*dreamOptics.y*protect*.4;
  // Compact soft solar glare + four mild streaks; no fullscreen exposure lift.
  float halo=exp(-r*r/(.0018+dreamRadius*dreamRadius*5.));
@@ -140,12 +153,17 @@ export function createDreamAtmosphere(scene, camera, slices, {
     dreamBlocking: { value: new THREE.Vector2() }, dreamAccumulation: { value: new THREE.Vector3() },
     dreamGate: { value: 0 }, dreamAspect: { value: 1 }, dreamRadius: { value: .01 },
     dreamTime: sharedAtmosphere?.uniforms.dreamTime ?? { value: 0 }, dreamProtection: { value: parameters.protection },
+    dreamOcclusion: { value: parameters.occlusionStrength },
   };
+  const flowUniforms = Object.fromEntries(Object.keys(FLOW_DEFAULTS).map(key => [key, {
+    value: ['cream', 'pink', 'lavender'].includes(key) ? new THREE.Color(parameters[key]) :
+      key === 'maskPreview' ? 0 : key === 'streakRotation' ? THREE.MathUtils.degToRad(parameters[key]) : parameters[key],
+  }]));
+  const flowEntries = Object.entries(flowUniforms);
   const skyMaterial = new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: skyFragment(),
     uniforms: { ...uniforms, inverseProjection: { value: camera.projectionMatrixInverse }, cameraWorld: { value: camera.matrixWorld },
       brightness: { value: parameters.backgroundStrength },
-      cream: { value: new THREE.Color('#fff19b') }, pink: { value: new THREE.Color('#ffb9e7') },
-      lavender: { value: new THREE.Color('#b787f5') } }, depthWrite: false, depthTest: false });
+      ...flowUniforms }, depthWrite: false, depthTest: false });
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), skyMaterial);
   sky.name = '流动混色天空（独立环境）'; sky.frustumCulled = false; sky.renderOrder = -10000;
   // Additional content scenes reuse the exact procedural-background clock,
@@ -194,6 +212,11 @@ export function createDreamAtmosphere(scene, camera, slices, {
     sky.visible = parameters.enabled && parameters.background === '流动混色';
     sharedBackdrops.forEach(({ mesh }) => { mesh.visible = sky.visible; });
     skyMaterial.uniforms.brightness.value = parameters.backgroundStrength;
+    for (const [key, uniform] of flowEntries) {
+      if (uniform.value?.isColor) uniform.value.set(parameters[key]);
+      else if (key === 'maskPreview') uniform.value = ['关闭', '颜色1 / 2 混合', '颜色3覆盖'].indexOf(parameters[key]);
+      else uniform.value = key === 'streakRotation' ? THREE.MathUtils.degToRad(parameters[key]) : parameters[key];
+    }
     return animate;
   }
   function update(timestamp, visible = true) {
@@ -251,6 +274,7 @@ export function createDreamAtmosphere(scene, camera, slices, {
     uniforms.dreamRadius.value = projected.radius;
     uniforms.dreamOptics.value.set(parameters.sunIntensity, parameters.rays, parameters.halo, parameters.spread);
     uniforms.dreamProtection.value = parameters.protection;
+    uniforms.dreamOcclusion.value = parameters.occlusionStrength;
     uniforms.dreamActive.value = parameters.enabled;
     slices?.requireCounts(parameters.enabled && sun.visible);
     return animate || transitionActive;
@@ -279,7 +303,7 @@ export function createDreamAtmosphere(scene, camera, slices, {
     const material = skyMaterial.clone();
     // Share only backdrop inputs. Specimen coverage and solar visibility stay
     // private to scene 1, so the particle scene can never sample stale slices.
-    for (const key of ['inverseProjection', 'cameraWorld', 'brightness', 'cream', 'pink', 'lavender', 'dreamTime', 'dreamAspect']) {
+    for (const key of ['inverseProjection', 'cameraWorld', 'brightness', ...Object.keys(FLOW_DEFAULTS), 'dreamTime', 'dreamAspect']) {
       material.uniforms[key] = skyMaterial.uniforms[key];
     }
     material.uniforms.dreamActive.value = false;
@@ -319,6 +343,7 @@ export function createDreamAtmosphere(scene, camera, slices, {
     createSharedBackdrop,
     onPanelRefresh(callback) { panelRefresh = callback; },
     setReducedMotion(value) { motionReduced = value; if (value) parameters.animated = false; panelRefresh(); },
+    restoreFlow() { Object.assign(parameters, FLOW_DEFAULTS); panelRefresh(); },
     restore() { Object.assign(parameters, ATMOSPHERE_DEFAULTS, { animated: !motionReduced }); uniforms.dreamTime.value = 0;
       previousTime = null; previousGateTime = null; gateTarget = uniforms.dreamGate.value; gateSettled = true; panelRefresh(); },
     dispose() { if (disposed) return; disposed = true; slices?.requireCounts(false); group.removeFromParent();
@@ -338,6 +363,26 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   const animated = folder.add(p, 'animated').name('背景流动').onChange(update);
   const speed = folder.add(p, 'speed', 0, 2, .01).name('流动速度').onChange(update);
   const brightness = folder.add(p, 'backgroundStrength', .2, 3, .01).name('混色背景亮度').onChange(requestRender);
+  const flow = folder.addFolder('流动混色个性化');
+  flow.addColor(p, 'pink').name('颜色1 · 底色').onChange(requestRender);
+  flow.addColor(p, 'cream').name('颜色2 · 混合色').onChange(requestRender);
+  flow.addColor(p, 'lavender').name('颜色3 · 覆盖色').onChange(requestRender);
+  flow.add(p, 'colorBalance', -.5, .5, .01).name('颜色2占比偏移').onChange(requestRender);
+  flow.add(p, 'lavenderAmount', 0, 1, .01).name('颜色3覆盖强度').onChange(requestRender);
+  flow.add(p, 'blockSize', .25, 4, .01).name('色块大小').onChange(requestRender);
+  flow.add(p, 'distortion', 0, 3, .01).name('流动扭曲').onChange(requestRender);
+  flow.add(p, 'softness', .1, 3, .01).name('混色过渡柔和度').onChange(requestRender);
+  flow.add(p, 'patternSeed', 0, 100, 1).name('图案种子').onChange(requestRender);
+  flow.add(p, 'streakStrength', 0, 2, .01).name('放射色带强度').onChange(requestRender);
+  flow.add(p, 'streakCount', 1, 24, 1).name('放射色带数量').onChange(requestRender);
+  flow.add(p, 'streakRotation', -180, 180, 1).name('色带旋转（°）').onChange(requestRender);
+  flow.add(p, 'maskPreview', ['关闭', '颜色1 / 2 混合', '颜色3覆盖']).name('混色遮罩预览').onChange(requestRender);
+  flow.add({ reset() { atmosphere.restoreFlow(); folder.controllersRecursive().forEach(c => c.updateDisplay()); update(); } }, 'reset').name('恢复混色默认');
+  const flowNote = document.createElement('div'); flowNote.className = 'viewer-effect-note';
+  flowNote.textContent = '配色与图案由场景1、2、6共享。占比偏移为正时增加颜色2，为负时增加底色；色块越大越舒展。没有外部遮罩图片；灰度预览显示实时生成的混色权重，白色表示该颜色占比高。色带跟随迎光，仅在场景1、6太阳可见时出现；预览保留场景模型与迎光。恢复混色默认只重置本组，刷新恢复全部默认。';
+  const flowHelp = document.createElement('details'); flowHelp.className = 'viewer-panel-help';
+  const flowSummary = document.createElement('summary'); flowSummary.textContent = '配色与遮罩说明';
+  flowHelp.append(flowSummary, flowNote); flow.$children.appendChild(flowHelp);
   folder.add(p, 'sunIntensity', 0, 60, .1).name('尽头亮心强度').onChange(requestRender);
   folder.add(p, 'sunRadius', .1, 3, .01).name('亮心半径').onChange(requestRender);
   folder.add(p, 'sunMode', ['无限远（太阳）', '有限距离']).name('亮心距离模式').onChange(update);
@@ -348,10 +393,12 @@ export function bindAtmospherePanel(gui, atmosphere, requestRender) {
   folder.add(p, 'edgeFade', 0, 25, .5).name('边缘渐隐范围（%）').onChange(requestRender);
   folder.add(p, 'transitionTime', 0, 2, .05).name('显隐过渡时长（秒）').onChange(requestRender);
   folder.add(p, 'protection', 0, 1, .01).name('紫色层级保护').onChange(requestRender);
+  folder.add(p, 'occlusionStrength', 0, 1, .01).name('模型遮挡影响（场景1）').onChange(requestRender);
   const note = document.createElement('div'); note.className = 'viewer-effect-note';
   note.textContent = '无限远模式：太阳方向固定为世界 −Z，平移和拉近不改变视角大小，转动镜头会移出视野。半径控制视角大小；距末层只在有限距离下生效，数值保留。太阳接近画面边缘时，光束按渐隐范围平滑变化；快速移入移出时再按过渡时长柔和追随，0 秒可恢复即时切换。混色与 HDRI 照明分开；手动选图或清除切回 HDRI / 纯白。速度 0 或关闭流动即暂停，后台自动停。屏幕光效不含完整体积散射或多次折射。';
+  note.textContent += ' 模型遮挡来自实时渲染的切片覆盖纹理，场景1专用；影响为1时按模型衰减迎光，0时忽略遮挡。场景6不使用这张纹理。';
   folder.$children.appendChild(note);
-  function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); distance.enable(p.sunMode === '有限距离'); }
+  function refresh() { const moving = p.enabled && p.background === '流动混色'; animated.enable(moving); speed.enable(moving && p.animated); brightness.enable(moving); flow.controllersRecursive().forEach(c => c.enable(moving)); distance.enable(p.sunMode === '有限距离'); }
   atmosphere.onPanelRefresh(refresh);
   refresh();
   return refresh;
