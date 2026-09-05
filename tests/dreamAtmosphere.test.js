@@ -111,6 +111,31 @@ test('solar shader is inserted after precision and before one final output trans
   assert.ok(shader.includes('dreamTransmittance'));a.dispose();output.dispose();
 });
 
+test('content atmosphere shares controls and time while keeping sun gates and coverage isolated', () => {
+  const camera=new THREE.PerspectiveCamera(44,1.44,.05,150);
+  camera.position.set(0,2.7,7.2);camera.lookAt(0,.5,-.6);
+  const main=createDreamAtmosphere(new THREE.Scene(),camera,null);
+  const scene=new THREE.Scene(), subject=new THREE.Mesh(new THREE.BoxGeometry(6,.1,4));
+  scene.add(subject);
+  const content=createDreamAtmosphere(scene,camera,null,{sharedAtmosphere:main,subject});
+  main.parameters.transitionTime=0;
+  content.update(0);content.update(100);content.syncCounts();
+  assert.equal(content.parameters,main.parameters);
+  assert.equal(content.uniforms.dreamTime,main.uniforms.dreamTime);
+  assert.ok(main.uniforms.dreamTime.value>0);
+  assert.equal(content.uniforms.dreamGate.value,1);
+  assert.equal(main.uniforms.dreamGate.value,0);
+  assert.equal(content.uniforms.dreamHasCounts.value,false);
+  const toward=content.sun.position.clone().sub(camera.position).normalize();
+  assert.deepEqual(toward.toArray(),[0,0,-1]);
+  main.parameters.sunMode='有限距离';content.update(200);
+  assert.ok(content.sun.position.z< -2);
+  main.parameters.enabled=false;assert.equal(content.update(300),false);
+  assert.equal(content.group.parent,null);
+  content.dispose();assert.equal(main.group.parent?.isScene,true);
+  main.dispose();subject.geometry.dispose();subject.material.dispose();
+});
+
 test('alpha sorting preserves all triangles, winding, groups and attributes, and restores canonical indices', () => {
   const geometry=new THREE.BoxGeometry(2,2,2);geometry.clearGroups();geometry.addGroup(0,18,0);geometry.addGroup(18,18,1);
   const index=geometry.index.array.slice(),positions=geometry.attributes.position.array.slice(),groups=structuredClone(geometry.groups);

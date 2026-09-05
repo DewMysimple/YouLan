@@ -4,7 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 export const BUTTERFLY_DEFAULTS = Object.freeze({
   playing: true, speed: 1, amplitude: 1, hovering: true, drift: .65,
   wingTint: '#ffffff', iridescence: .08, environmentIntensity: .45,
-  dust: true, backgroundTop: '#284b50', backgroundBottom: '#080e22',
+  dust: true,
 });
 
 export function disposeButterflyTree(root) {
@@ -19,25 +19,6 @@ export function disposeButterflyTree(root) {
   });
   geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose());
   textures.forEach(t => t.dispose());
-}
-
-function createBackdrop(root, p) {
-  const material = new THREE.ShaderMaterial({
-    depthTest: false, depthWrite: false, toneMapped: false,
-    uniforms: { top: { value: new THREE.Color(p.backgroundTop) }, bottom: { value: new THREE.Color(p.backgroundBottom) } },
-    vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,1.,1.);}`,
-    fragmentShader: `varying vec2 vUv;uniform vec3 top,bottom;
-      void main(){vec2 uv=vUv;vec3 col=mix(bottom,top,smoothstep(0.,1.,uv.y));
-        float glow=exp(-dot((uv-vec2(.32,.75))*vec2(1.,1.4),(uv-vec2(.32,.75))*vec2(1.,1.4))*8.);
-        col+=vec3(.10,.12,.075)*glow;
-        col*=1.-.38*smoothstep(.25,.8,length(uv-.5));
-        gl_FragColor=vec4(col,1.);
-        #include <colorspace_fragment>
-      }`,
-  });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
-  mesh.name = '场景6·林间柔光'; mesh.frustumCulled = false; mesh.renderOrder = -1000;
-  root.add(mesh); return material;
 }
 
 function createDust(root) {
@@ -71,8 +52,11 @@ function createDust(root) {
 export function createButterflyScene(scene, requestRender, { reducedMotion = false } = {}) {
   const parameters = { ...BUTTERFLY_DEFAULTS, playing: !reducedMotion };
   const root = new THREE.Group(); root.name='场景6·蝶翼'; scene.add(root);
-  const flight = new THREE.Group(); flight.name='蝴蝶悬停'; root.add(flight);
-  const background = createBackdrop(root, parameters), dust = createDust(root);
+  // The asset faces +Y with wings in XY. Lay it in XZ, head toward the −Z sun.
+  // Keep this rest orientation outside the animated hover transform.
+  const heading = new THREE.Group(); heading.name='蝴蝶水平迎光'; heading.rotation.x=-Math.PI/2; root.add(heading);
+  const flight = new THREE.Group(); flight.name='蝴蝶悬停'; heading.add(flight);
+  const dust = createDust(root);
   root.add(new THREE.HemisphereLight('#e7eee7','#292638',1.2));
   const key=new THREE.DirectionalLight('#fff2e5',2.1); key.position.set(-3,5,7);root.add(key);
   const rim=new THREE.DirectionalLight('#cddcf3',1.4); rim.position.set(4,1,-5);root.add(rim);
@@ -88,8 +72,6 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
       o.material.envMapIntensity=parameters.environmentIntensity;
       if(o.name.includes('wing')) {o.material.color.set(parameters.wingTint);o.material.iridescence=parameters.iridescence;}
     }});
-    background.uniforms.top.value.set(parameters.backgroundTop);
-    background.uniforms.bottom.value.set(parameters.backgroundBottom);
     dust.visible=parameters.dust;
     if(!parameters.hovering){flight.position.set(0,0,0);flight.rotation.set(0,0,0);}
     previousTimestamp=null;refresh();requestRender();
@@ -174,8 +156,6 @@ export function bindButterflyPanel(gui,butterfly){
   folder.add(p,'iridescence',0,1,.01).name('翅面虹彩').onChange(update);
   folder.add(p,'environmentIntensity',0,2,.01).name('HDRI 质感强度').onChange(update);
   folder.add(p,'dust').name('林间微光').onChange(update);
-  folder.addColor(p,'backgroundTop').name('背景顶部').onChange(update);
-  folder.addColor(p,'backgroundBottom').name('背景底部').onChange(update);
   folder.add({reset:()=>butterfly.restore()},'reset').name('重置蝴蝶');
   const status=document.createElement('div');status.className='viewer-butterfly-status viewer-effect-note';
   folder.$children.appendChild(status);

@@ -127,17 +127,19 @@ vec3 dreamGlare(vec2 uv){
 }
 `;
 
-export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = false } = {}) {
+export function createDreamAtmosphere(scene, camera, slices, {
+  reducedMotion = false, sharedAtmosphere = null, subject = null,
+} = {}) {
   let motionReduced = reducedMotion;
   let panelRefresh = () => {};
-  const parameters = { ...ATMOSPHERE_DEFAULTS, animated: !reducedMotion };
+  const parameters = sharedAtmosphere?.parameters ?? { ...ATMOSPHERE_DEFAULTS, animated: !reducedMotion };
   const uniforms = {
     dreamActive: { value: false }, dreamHasCounts: { value: false }, dreamCounts: { value: null },
     dreamSunUv: { value: new THREE.Vector2(.5, .5) }, dreamOptics: { value: new THREE.Vector4() },
     dreamTintOuter: { value: new THREE.Vector3() }, dreamTintInner: { value: new THREE.Vector3() },
     dreamBlocking: { value: new THREE.Vector2() }, dreamAccumulation: { value: new THREE.Vector3() },
     dreamGate: { value: 0 }, dreamAspect: { value: 1 }, dreamRadius: { value: .01 },
-    dreamTime: { value: 0 }, dreamProtection: { value: parameters.protection },
+    dreamTime: sharedAtmosphere?.uniforms.dreamTime ?? { value: 0 }, dreamProtection: { value: parameters.protection },
   };
   const skyMaterial = new THREE.ShaderMaterial({ vertexShader: vertex, fragmentShader: skyFragment(),
     uniforms: { ...uniforms, inverseProjection: { value: camera.projectionMatrixInverse }, cameraWorld: { value: camera.matrixWorld },
@@ -200,17 +202,18 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
     group.visible = parameters.enabled;
     if (parameters.enabled && !group.parent) scene.add(group);
     if (!parameters.enabled && group.parent) group.removeFromParent();
-    sun.visible = parameters.enabled && parameters.sunIntensity > 0 && !!source;
+    const lightSubject = source ?? subject;
+    sun.visible = parameters.enabled && parameters.sunIntensity > 0 && !!lightSubject;
     const infinite = parameters.sunMode === '无限远（太阳）';
     distantSun.value = infinite;
-    if (source) {
+    if (lightSubject) {
       if (infinite) {
         // 50 is a projection reference, not a distance to the last slice.
         // Radius/distance ratio stays fixed under pan, dolly and depth changes.
         camera.getWorldPosition(sun.position); sun.position.z -= 50;
         sun.scale.setScalar(parameters.sunRadius);
       } else {
-        bounds.setFromObject(source);
+        bounds.setFromObject(lightSubject);
         bounds.getCenter(sun.position);
         sun.position.z = bounds.min.z - parameters.distance;
         sun.scale.setScalar(parameters.sunRadius * baseSize / 9.1);
@@ -249,10 +252,12 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
     uniforms.dreamOptics.value.set(parameters.sunIntensity, parameters.rays, parameters.halo, parameters.spread);
     uniforms.dreamProtection.value = parameters.protection;
     uniforms.dreamActive.value = parameters.enabled;
-    slices.requireCounts(parameters.enabled && sun.visible);
+    slices?.requireCounts(parameters.enabled && sun.visible);
     return animate || transitionActive;
   }
   function syncCounts() {
+    // Content scenes share the atmosphere controls and clock, never specimen coverage.
+    if (!slices) return;
     const data = slices.optics();
     uniforms.dreamCounts.value = data.texture;
     uniforms.dreamHasCounts.value = !!data.texture;
@@ -316,7 +321,7 @@ export function createDreamAtmosphere(scene, camera, slices, { reducedMotion = f
     setReducedMotion(value) { motionReduced = value; if (value) parameters.animated = false; panelRefresh(); },
     restore() { Object.assign(parameters, ATMOSPHERE_DEFAULTS, { animated: !motionReduced }); uniforms.dreamTime.value = 0;
       previousTime = null; previousGateTime = null; gateTarget = uniforms.dreamGate.value; gateSettled = true; panelRefresh(); },
-    dispose() { if (disposed) return; disposed = true; slices.requireCounts(false); group.removeFromParent();
+    dispose() { if (disposed) return; disposed = true; slices?.requireCounts(false); group.removeFromParent();
       sharedBackdrops.forEach(({ mesh, material }) => { mesh.removeFromParent(); material.dispose(); });
       sharedBackdrops.clear();
       sky.geometry.dispose(); skyMaterial.dispose(); sun.geometry.dispose(); sunMaterial.dispose();

@@ -29,9 +29,8 @@ export function createSelectiveBloom(renderer, renderBeauty) {
     const scene = new THREE.Scene();
     scene.name = '局部发光代理（不显示）';
     const materials = [0, 1].map(() => new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, toneMapped: false }));
-    const proxy = new THREE.Mesh(source.geometry, materials);
-    proxy.matrixAutoUpdate = false;
-    scene.add(proxy);
+    const proxy = source ? new THREE.Mesh(source.geometry, materials) : null;
+    if (proxy) { proxy.matrixAutoUpdate = false; scene.add(proxy); }
     const bloom = new UnrealBloomPass(new THREE.Vector2(32, 32), 1, 0.45, 1);
     const copy = new THREE.ShaderMaterial({
       uniforms: { inputTexture: { value: emission.texture } },
@@ -69,7 +68,7 @@ export function createSelectiveBloom(renderer, renderBeauty) {
     if (disposed) return;
     const localActive = parameters.enabled && parameters.strength > 0 && source &&
       source.material.some(material => material.visible && material.emissiveMap && material.emissiveIntensity > 0);
-    const active = supported && source && (localActive || atmosphere?.effectActive);
+    const active = supported && (localActive || atmosphere?.effectActive);
     if (!active) { release(); renderBeauty(scene, camera); return; }
     if (!resources) allocate();
     const r = resources;
@@ -79,21 +78,23 @@ export function createSelectiveBloom(renderer, renderBeauty) {
       [r.beauty, r.emission, r.work].forEach(target => target.setSize(width, height));
       r.bloom.setSize(width, height);
     }
-    source.updateWorldMatrix(true, false);
-    r.proxy.geometry = source.geometry;
-    r.proxy.matrix.copy(source.matrixWorld);
-    r.proxy.layers.mask = source.layers.mask;
-    r.proxy.visible = source.visible;
-    for (let parent = source.parent; parent; parent = parent.parent) r.proxy.visible &&= parent.visible;
-    source.material.forEach((material, slot) => {
-      const proxyMaterial = r.materials[slot];
-      proxyMaterial.visible = material.visible && material.opacity > 0;
-      if (proxyMaterial.map !== material.emissiveMap) {
-        proxyMaterial.map = material.emissiveMap;
-        proxyMaterial.needsUpdate = true;
-      }
-      proxyMaterial.color.copy(material.emissive).multiplyScalar(material.emissiveMap ? material.emissiveIntensity * material.opacity : 0);
-    });
+    if (source) {
+      source.updateWorldMatrix(true, false);
+      r.proxy.geometry = source.geometry;
+      r.proxy.matrix.copy(source.matrixWorld);
+      r.proxy.layers.mask = source.layers.mask;
+      r.proxy.visible = source.visible;
+      for (let parent = source.parent; parent; parent = parent.parent) r.proxy.visible &&= parent.visible;
+      source.material.forEach((material, slot) => {
+        const proxyMaterial = r.materials[slot];
+        proxyMaterial.visible = material.visible && material.opacity > 0;
+        if (proxyMaterial.map !== material.emissiveMap) {
+          proxyMaterial.map = material.emissiveMap;
+          proxyMaterial.needsUpdate = true;
+        }
+        proxyMaterial.color.copy(material.emissive).multiplyScalar(material.emissiveMap ? material.emissiveIntensity * material.opacity : 0);
+      });
+    }
     const previousTarget = renderer.getRenderTarget();
     const previousFace = renderer.getActiveCubeFace(), previousMip = renderer.getActiveMipmapLevel();
     const previousColor = renderer.getClearColor(new THREE.Color()), previousAlpha = renderer.getClearAlpha();
@@ -114,7 +115,7 @@ export function createSelectiveBloom(renderer, renderBeauty) {
       const solarActive = atmosphere?.sunBloomActive;
       Object.assign(r.bloom, { strength: localActive ? parameters.strength : solarActive ? BLOOM_DEFAULTS.strength : 0, radius: parameters.radius, threshold: parameters.threshold });
       if (localActive || solarActive) r.bloom.render(renderer, null, r.work, 0, false);
-      r.output.uniforms.pureWhite.value = scene.background?.isColor && scene.background.getHex() === 0xffffff;
+      r.output.uniforms.pureWhite.value = !!source && scene.background?.isColor && scene.background.getHex() === 0xffffff;
       r.output.render(renderer, previousTarget, r.beauty);
     } finally {
       renderer.setRenderTarget(previousTarget, previousFace, previousMip);
@@ -122,7 +123,7 @@ export function createSelectiveBloom(renderer, renderBeauty) {
       renderer.autoClear = previousAuto;
     }
   }
-  return { parameters, supported, attach(mesh) { source = mesh; }, render,
+  return { parameters, supported, attach(mesh) { release(); source = mesh; }, render,
     setAtmosphere(value) { atmosphere = value; release(); },
     dispose() { if (disposed) return; disposed = true; release(); source = null; } };
 }

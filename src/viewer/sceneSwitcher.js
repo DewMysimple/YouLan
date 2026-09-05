@@ -125,9 +125,9 @@ export function createSceneSwitcher(gui, {
   initialPaper.quaternion.copy(scratch.quaternion);
 
   const initialButterfly = {
-    position: new THREE.Vector3(1.1, 1.3, 10.8),
-    quaternion: new THREE.Quaternion(), target: new THREE.Vector3(0, .35, 0),
-    fov: 38, near: .05, far: 150, minDistance: 3, maxDistance: 35,
+    position: new THREE.Vector3(0, 2.7, 7.2),
+    quaternion: new THREE.Quaternion(), target: new THREE.Vector3(0, .5, -.6),
+    fov: 44, near: .05, far: 150, minDistance: 3, maxDistance: 35,
   };
   scratch.position.copy(initialButterfly.position);
   scratch.lookAt(initialButterfly.target);

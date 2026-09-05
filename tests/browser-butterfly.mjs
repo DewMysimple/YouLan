@@ -24,6 +24,22 @@ try {
     window.hinge=bf.getObjectByName('LeftForewingPivot');window.bfRenders=0;
     bf.onAfterRender=()=>bfRenders++;void 0;`);
   report.failureRecovery=true;
+  await b.delay(1200);
+  report.atmosphere=await b.evaluate(`(()=>{
+    const sky=bf.getObjectByName('流动混色天空（独立环境）');
+    const sourceSky=scene.getObjectByName('流动混色天空（独立环境）');
+    const heading=bf.getObjectByName('蝴蝶水平迎光');
+    return {sharedClock:sky.material.uniforms.dreamTime===sourceSky.material.uniforms.dreamTime,
+      ownMaterial:sky.material!==sourceSky.material,counts:sky.material.uniforms.dreamHasCounts.value,
+      gate:sky.material.uniforms.dreamGate.value,sun:sky.material.uniforms.dreamSunUv.value.toArray(),
+      horizontal:Math.abs(heading.rotation.x+Math.PI/2)<1e-9,
+      oldBackdrop:!!bf.getObjectByName('场景6·林间柔光')};
+  })()`);
+  assert.equal(report.atmosphere.sharedClock,true);assert.equal(report.atmosphere.ownMaterial,true);
+  assert.equal(report.atmosphere.counts,false);assert.equal(report.atmosphere.gate,1);
+  assert.equal(report.atmosphere.horizontal,true);assert.equal(report.atmosphere.oldBackdrop,false);
+  assert.ok(report.atmosphere.sun[1]>.6&&report.atmosphere.sun[1]<.98,'sun ahead, above butterfly');
+  await b.set(['梦境背景与迎光'],'背景流动',false);
   const before=await b.evaluate('hinge.quaternion.toArray()');
   await b.delay(210);
   assert.notDeepEqual(await b.evaluate('hinge.quaternion.toArray()'),before);
@@ -49,6 +65,21 @@ try {
   assert.ok(await b.evaluate('Math.abs(hinge.quaternion.w-1)<1e-6'));
   await b.screenshot('02-open-wings.png');
   await b.set(panel,'飞行起伏',false);
+  await b.screenshot('10-horizontal-toward-sun.png');
+  await b.set(['梦境背景与迎光'],'迎光放射强度',0);
+  await b.delay(100);await b.screenshot('11-rays-off.png');
+  await b.set(['梦境背景与迎光'],'迎光放射强度',.65);
+  await b.set(['梦境背景与迎光'],'背景模式','纯黑对照');
+  await b.delay(100);
+  assert.equal(await b.evaluate(`bf.getObjectByName('流动混色天空（独立环境）').visible`),false);
+  await b.screenshot('12-black-sun.png');
+  await b.set(['梦境背景与迎光'],'背景模式','HDRI / 纯白');await b.delay(100);
+  await b.screenshot('13-hdri-sun.png');
+  await b.set(['梦境背景与迎光'],'启用梦境效果',false);await b.delay(100);
+  assert.equal(await b.evaluate(`!!bf.getObjectByName('梦境环境与尽头亮源')`),false);
+  await b.set(['梦境背景与迎光'],'启用梦境效果',true);
+  await b.set(['梦境背景与迎光'],'背景模式','流动混色');await b.delay(1200);
+  report.backgroundModes=true;
   // Inspect exact poses from the exported clip with the normal scene animation paused.
   await b.evaluate(`(async()=>{
     const THREE=await import('/source/threejs-transmission/build/three.module.js');

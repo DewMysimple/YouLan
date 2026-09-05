@@ -271,6 +271,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
   let flower = null;
   let paper = null;
   let butterfly = null;
+  let butterflyAtmosphere = null;
+  let butterflyBloom = null;
   let dappled = null;
   let sceneSwitcher = null;
   let disposePollenBackdrop = null;
@@ -321,6 +323,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
       renderFrame = 0;
       if (!disposed) {
         const activeSceneId = sceneSwitcher?.activeId ?? 'specimen';
+        if (!['specimen', 'pollen'].includes(activeSceneId)) atmosphere.pauseClock();
+        if (activeSceneId !== 'butterfly') butterflyAtmosphere?.pauseClock();
         if (activeSceneId === 'specimen') depthStack?.flush();
         const cinematicCamera = activeSceneId === 'paper' && paper?.ownsCamera;
         const screenSpace = activeSceneId === 'dappled' || activeSceneId === 'firework';
@@ -353,7 +357,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
             renderer.render(flowerScene, camera);
           } else if (activeSceneId === 'butterfly') {
             butterflyAnimated = butterfly?.update(timestamp, !document.hidden) ?? false;
-            renderer.render(butterflyScene, camera);
+            atmosphereAnimated = butterflyAtmosphere.update(timestamp, !document.hidden);
+            butterflyAtmosphere.renderWithBackground(() => butterflyBloom.render(butterflyScene, camera));
           } else if (activeSceneId === 'paper') {
             paperAnimated = paper?.update(timestamp, !document.hidden) ?? false;
             renderer.render(paperScene, camera);
@@ -387,6 +392,12 @@ export function createSpecimenViewer(container, { onError } = {}) {
     resetParallax: () => pointerParallax.resetInput({ immediate: true, clearOrigin: true }),
   });
   butterfly = createButterflyScene(butterflyScene, requestRender, { reducedMotion: motionPreference.matches });
+  butterflyAtmosphere = createDreamAtmosphere(butterflyScene, camera, null, {
+    reducedMotion: motionPreference.matches, sharedAtmosphere: atmosphere,
+    subject: butterfly.root.getObjectByName('蝴蝶水平迎光'),
+  });
+  butterflyBloom = createSelectiveBloom(renderer, (targetScene, targetCamera) => renderer.render(targetScene, targetCamera));
+  butterflyBloom.setAtmosphere(butterflyAtmosphere);
   dappled = createDappledLightScene(dappledScene, renderer, requestRender, {
     reducedMotion: motionPreference.matches,
   });
@@ -406,6 +417,7 @@ export function createSpecimenViewer(container, { onError } = {}) {
   disposePollenBackdrop = atmosphere.createSharedBackdrop(pollenScene);
   const visibilityChange = () => {
     atmosphere.pauseClock();
+    butterflyAtmosphere.pauseClock();
     pointerParallax.pauseClock();
     pollen.pauseClock();
     firework.pauseClock();
@@ -650,6 +662,8 @@ export function createSpecimenViewer(container, { onError } = {}) {
     depthStack?.dispose();
     disposeEnvironmentPanel?.();
     bloom.dispose();
+    butterflyBloom.dispose();
+    butterflyAtmosphere.dispose();
     transparentOrdering?.dispose();
     atmosphere.dispose();
     disposePollenBackdrop?.();
