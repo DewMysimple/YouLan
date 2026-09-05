@@ -31,7 +31,7 @@ try {
     sharedEnvironment:paperScene.environment===scene.environment,
     instanced:aircraft.isInstancedMesh, attributes:aircraft.geometry.attributes.orbitData.count})`);
   assert.equal(report.default.count, 2400);
-  assert.equal(report.default.calls, 6);
+  assert.equal(report.default.calls, 7);
   for (const key of ['oneCanvas', 'isolated', 'sharedEnvironment', 'instanced']) assert.equal(report.default[key], true);
   assert.equal(report.default.attributes, 10000);
   await b.screenshot('01-default.png');

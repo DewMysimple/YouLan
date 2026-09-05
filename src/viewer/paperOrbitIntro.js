@@ -6,8 +6,8 @@ const up = new THREE.Vector3(0, 1, 0);
 const finalPosition = new THREE.Vector3(0, 2.4, 18.8);
 const origin = new THREE.Vector3();
 const approach = new THREE.CatmullRomCurve3([
-  new THREE.Vector3(0, 2, 40), new THREE.Vector3(3, 2.8, 44),
-  new THREE.Vector3(11, 4, 39), new THREE.Vector3(15, 4.5, 28),
+  new THREE.Vector3(0, 2, 40), new THREE.Vector3(3, 3.8, 44),
+  new THREE.Vector3(11, 5.2, 39), new THREE.Vector3(15, 2.8, 28),
   new THREE.Vector3(12, 3, 18), new THREE.Vector3(7, 2, 12),
 ]);
 
@@ -16,21 +16,35 @@ const approach = new THREE.CatmullRomCurve3([
 export function samplePaperIntro(progress, lead) {
   const t = THREE.MathUtils.clamp(progress, 0, 1);
   const join = ease(t, .58, .93);
-  const pathPosition = approach.getPointAt(Math.min(t / .78, 1));
+  const pathTime = Math.min(t / .9, 1);
+  const pathPosition = approach.getPointAt(pathTime);
   const radius = THREE.MathUtils.lerp(pathPosition.length(), lead.position.length(), join);
   const position = pathPosition.normalize().lerp(lead.position.clone().normalize(), join)
     .normalize().multiplyScalar(radius);
-  const direction = approach.getTangentAt(Math.min(t / .78, 1)).lerp(lead.direction, join).normalize();
+  const guidePosition = position.clone();
+  const direction = approach.getTangentAt(pathTime).lerp(lead.direction, join).normalize();
   const right = new THREE.Vector3().crossVectors(up, direction).normalize();
+  const flight = 1 - ease(t, .48, .86);
+  position.addScaledVector(right, .72 * Math.sin(t * 19) * flight)
+    .addScaledVector(up, .42 * Math.sin(t * 24 + .3) * flight);
   const normal = new THREE.Vector3().crossVectors(direction, right);
   const quaternion = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, normal, direction));
-  quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -.2 * Math.sin(t * Math.PI * 2)));
+  quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(
+    .1 * Math.sin(t * 24 - .6) * flight, .1 * Math.cos(t * 19) * flight,
+    -.48 * Math.sin(t * 19 + .4) * flight)));
   quaternion.slerp(lead.quaternion, join);
   const pullback = ease(t, .35, 1);
-  const cameraPosition = position.clone().addScaledVector(direction, -3.4).addScaledVector(up, 1.15)
+  // Camera follows the quieter guide with a delayed tangent, so the aircraft
+  // can surge, climb and bank within the frame instead of being pinned to it.
+  const cameraHeading = approach.getTangentAt(Math.max(0, pathTime - .035)).lerp(direction, join).normalize();
+  const chaseDistance = 4.1 + 1.05 * Math.sin(t * 15 + .6) * flight;
+  const cameraPosition = guidePosition.clone().addScaledVector(cameraHeading, -chaseDistance)
+    .addScaledVector(right, .65 * Math.sin(t * 11 + .3) * flight)
+    .addScaledVector(up, 1.95 + .3 * Math.sin(t * 13) * flight)
     .lerp(finalPosition, pullback);
-  const target = position.clone().addScaledVector(direction, .6).lerp(origin, pullback);
-  return { position, quaternion, cameraPosition, target, scaleBlend: join };
+  const target = guidePosition.clone().addScaledVector(direction, .5).lerp(origin, pullback);
+  return { position, quaternion, cameraPosition, target, scaleBlend: join,
+    cameraRoll: .035 * Math.sin(t * 16) * flight * (1 - pullback) };
 }
 
 export function createPaperOrbitIntro({ camera, controls, resetParallax, requestRender, onChange }) {
@@ -78,6 +92,8 @@ export function createPaperOrbitIntro({ camera, controls, resetParallax, request
       hero.position.copy(p.position); hero.quaternion.copy(p.quaternion);
       hero.scale.setScalar(THREE.MathUtils.lerp(.85, lead.size, p.scaleBlend));
       pose(p.cameraPosition, p.target);
+      camera.rotateZ(p.cameraRoll);
+      camera.updateMatrixWorld();
       publish();
       if (elapsed >= PAPER_INTRO_DURATION) finish();
       return this.ownsCamera;

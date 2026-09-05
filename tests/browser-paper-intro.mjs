@@ -21,6 +21,10 @@ try {
     camera:__camera.position.toArray()})`);
   assert.equal(report.opening.hero, true);
   assert.equal(report.opening.leadScale, 0);
+  report.sky = await b.evaluate(`({clouds:paperScene.getObjectByName('场景5·远近云层').count,
+    sun:paperScene.getObjectByName('场景5·粉彩天空').material.uniforms.sunStrength.value})`);
+  assert.equal(report.sky.clouds, 660);
+  assert.ok(report.sky.sun > 0);
   // The instanced batch still submits a draw when its vertices are offscreen.
   await b.screenshot('01-single-plane.png');
   await b.delay(2200); await b.screenshot('02-follow.png');
@@ -60,6 +64,20 @@ try {
   await b.click(selection, '重置当前场景视角');
   assert.equal(await b.evaluate('paperScene.userData.paperOrbit.intro.state'), 'complete');
   report.replaySkipReset = true;
+
+  await b.set(panel, '播放环游', false);
+  await b.set(panel, '显示云层', false); await b.delay(100);
+  assert.equal(await b.evaluate('__renderer.info.render.calls'), 6);
+  await b.set(panel, '太阳柔光', 0);
+  assert.equal(await b.evaluate(`paperScene.getObjectByName('场景5·粉彩天空').material.uniforms.sunStrength.value`), 0);
+  await b.set(panel, '显示云层', true);
+  await b.set(panel, '云层浓度', 1);
+  await b.set(panel, '太阳柔光', .65);
+  await b.delay(100);
+  assert.equal(await b.evaluate('__renderer.info.render.calls'), 7);
+  assert.equal(await b.evaluate(`paperScene.getObjectByName('场景5·远近云层').material.uniforms.opacity.value`), 1);
+  report.skyControls = true;
+  await b.click(panel, '重置纸飞机环游');
 
   await b.click(panel, '重播入场'); await b.delay(100);
   await b.send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});

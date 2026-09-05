@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MAX_PLANES, TAU, createLanes, seededRandom, sampleOrbit, installOrbitShader } from './paperOrbitMotion.js';
 import { createPaperOrbitIntro } from './paperOrbitIntro.js';
+import { createPaperOrbitSky, PAPER_SKY_DEFAULTS } from './paperOrbitSky.js';
 
 export const PAPER_ORBIT_DEFAULTS = Object.freeze({
+  ...PAPER_SKY_DEFAULTS,
   playing: true, count: 2400, speed: 1, size: .22, radius: 4.3, flutter: .28,
   planetSpin: .055, showPaths: false, pathOpacity: .13,
   paperColor: '#fff9ed', oceanColor: '#738fc5', landColor: '#88cfc5',
-  backgroundTop: '#919bd2', backgroundBottom: '#d5bce5', backgroundAccent: '#88d1dc',
+  backgroundTop: '#718fb9', backgroundBottom: '#c8afcf', backgroundAccent: '#b8d4dd',
   atmosphere: .16, environmentIntensity: .3,
 });
 
@@ -26,38 +28,12 @@ function disposeTree(root) {
   textures.forEach(texture => { texture.source?.data?.close?.(); texture.dispose(); });
 }
 
-function createBackdrop(parameters) {
-  const material = new THREE.ShaderMaterial({
-    depthTest: false, depthWrite: false, toneMapped: false,
-    uniforms: {
-      skyTop: { value: new THREE.Color(parameters.backgroundTop) },
-      skyBottom: { value: new THREE.Color(parameters.backgroundBottom) },
-      skyAccent: { value: new THREE.Color(parameters.backgroundAccent) },
-    },
-    vertexShader: 'varying vec2 vUv; void main(){vUv=uv;gl_Position=vec4(position.xy,1.,1.);}',
-    fragmentShader: `varying vec2 vUv; uniform vec3 skyTop, skyBottom, skyAccent;
-      void main(){
-        vec3 color=mix(skyBottom,skyTop,smoothstep(0.,1.,vUv.y));
-        float glow=exp(-4.5*dot(vUv-vec2(.58,.55),vUv-vec2(.58,.55)));
-        color=mix(color,skyAccent,glow*.38);
-        gl_FragColor=vec4(color,1.);
-        #include <colorspace_fragment>
-      }`,
-  });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
-  mesh.name = '场景5·粉彩天空';
-  mesh.frustumCulled = false;
-  mesh.renderOrder = -10000;
-  return mesh;
-}
-
 export function createPaperOrbitScene(scene, requestRender, { reducedMotion = false, camera, controls, resetParallax = () => {} } = {}) {
   const parameters = { ...PAPER_ORBIT_DEFAULTS, playing: !reducedMotion };
   const root = new THREE.Group();
   root.name = '场景5·纸飞机环游星球';
   scene.add(root);
-  const backdrop = createBackdrop(parameters);
-  root.add(backdrop);
+  const sky = createPaperOrbitSky(root, camera, parameters);
   const planet = new THREE.Group();
   planet.name = '旋转低多边形地球';
   planet.rotation.set(.13, -.7, -.16);
@@ -183,10 +159,7 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
       object.material.envMapIntensity = parameters.environmentIntensity;
     });
     halo.material.uniforms.strength.value = parameters.atmosphere;
-    const sky = backdrop.material.uniforms;
-    sky.skyTop.value.set(parameters.backgroundTop);
-    sky.skyBottom.value.set(parameters.backgroundBottom);
-    sky.skyAccent.value.set(parameters.backgroundAccent);
+    sky.apply();
     paths.visible = parameters.showPaths;
     syncIntroVisibility();
     paths.material.opacity = parameters.pathOpacity;
@@ -293,15 +266,17 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
     update(timestamp, visible = true) {
       if (disposed || !active) return false;
       const animated = !!planes && visible && parameters.playing && parameters.speed > 0
-        && (parameters.count > 0 || parameters.planetSpin > 0);
+        && (parameters.count > 0 || parameters.planetSpin > 0 || (parameters.clouds && parameters.cloudDrift > 0));
+      let delta = 0;
       if (animated && previousTimestamp !== null) {
-        const delta = Math.min(.1, Math.max(0, (timestamp - previousTimestamp) / 1000)) * parameters.speed;
+        delta = Math.min(.1, Math.max(0, (timestamp - previousTimestamp) / 1000)) * parameters.speed;
         uniforms.orbitTime.value += delta;
         planet.rotation.y += delta * parameters.planetSpin;
       }
       previousTimestamp = animated ? timestamp : null;
       scene.userData.paperOrbit.time = uniforms.orbitTime.value;
       const introAnimated = intro.update(timestamp, visible, planes && intro.ownsCamera ? sampleLead() : null, hero);
+      sky.update(delta);
       return animated || introAnimated;
     },
     dispose() {
@@ -331,6 +306,10 @@ export function bindPaperOrbitPanel(gui, paper) {
   folder.addColor(p, 'landColor').name('陆地颜色').onChange(update);
   folder.add(p, 'atmosphere', 0, .8, .01).name('大气柔边').onChange(update);
   folder.add(p, 'environmentIntensity', 0, 2, .01).name('HDRI 质感强度').onChange(update);
+  folder.add(p, 'clouds').name('显示云层').onChange(update);
+  folder.add(p, 'cloudOpacity', 0, 1, .01).name('云层浓度').onChange(update);
+  folder.add(p, 'cloudDrift', 0, 2, .01).name('云层流动').onChange(update);
+  folder.add(p, 'sunStrength', 0, 2, .01).name('太阳柔光').onChange(update);
   folder.addColor(p, 'backgroundTop').name('天空顶部').onChange(update);
   folder.addColor(p, 'backgroundBottom').name('天空底部').onChange(update);
   folder.addColor(p, 'backgroundAccent').name('天空柔光').onChange(update);

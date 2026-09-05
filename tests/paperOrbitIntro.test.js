@@ -27,7 +27,7 @@ test('intro opens on one aircraft, clears planet and reaches the exact live pose
       if (i === 500) {
         assert.ok(pose.position.distanceTo(lead.position) < 1e-10);
         assert.ok(pose.quaternion.angleTo(lead.quaternion) < 1e-10);
-        assert.deepEqual(pose.cameraPosition.toArray(), [0, 2.4, 18.8]);
+        assert.ok(pose.cameraPosition.distanceTo(new THREE.Vector3(0, 2.4, 18.8)) < 1e-10);
         assert.deepEqual(pose.target.toArray(), [0, 0, 0]);
       }
     }
@@ -58,4 +58,21 @@ test('intro waits for assets, pauses hidden time and releases camera constraints
   assert.equal(controls.minDistance, 8);
   assert.equal(controls.maxDistance, 50);
   assert.deepEqual(camera.position.toArray(), [0, 2.4, 18.8]);
+});
+
+test('early chase has screen-space travel and changing distance instead of locking the plane in place', () => {
+  const camera = new THREE.PerspectiveCamera(43, 1.44, .05, 200);
+  const samples = [];
+  for (let i = 0; i <= 50; i++) {
+    const t = i / 50 * .32, pose = samplePaperIntro(t, leadAt(t * PAPER_INTRO_DURATION));
+    camera.position.copy(pose.cameraPosition); camera.lookAt(pose.target);
+    camera.rotateZ(pose.cameraRoll); camera.updateMatrixWorld();
+    const projected = pose.position.clone().project(camera);
+    samples.push({ x: projected.x, y: projected.y, distance: pose.position.distanceTo(camera.position) });
+    assert.ok(Math.abs(projected.x) < .8 && Math.abs(projected.y) < .8, 'leader remains clearly in view');
+  }
+  const range = key => Math.max(...samples.map(p => p[key])) - Math.min(...samples.map(p => p[key]));
+  assert.ok(range('x') > .15, 'lateral relative motion');
+  assert.ok(range('y') > .12, 'vertical relative motion');
+  assert.ok(range('distance') > 1, 'visible approach and separation');
 });
