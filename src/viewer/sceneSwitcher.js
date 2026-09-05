@@ -5,6 +5,7 @@ export const SCENE_LABELS = Object.freeze({
   pollen: '场景2·花粉星云',
   firework: '场景3·金菊闪柳烟花',
   flower: '场景4·无限花开',
+  paper: '场景5·纸飞机环游',
 });
 
 function cameraState(camera, controls) {
@@ -54,10 +55,13 @@ export function createSceneSwitcher(gui, {
   firework,
   flowerScene,
   flower,
+  paperScene,
+  paper,
   specimenFolders,
   pollenFolders,
   fireworkFolders,
   flowerFolders,
+  paperFolders,
 }) {
   const initialSpecimen = cameraState(camera, controls);
   const initialPollen = {
@@ -101,8 +105,23 @@ export function createSceneSwitcher(gui, {
   scratch.position.copy(initialFlower.position);
   scratch.lookAt(initialFlower.target);
   initialFlower.quaternion.copy(scratch.quaternion);
+  const initialPaper = {
+    position: new THREE.Vector3(0, 2.4, 18.8),
+    quaternion: new THREE.Quaternion(),
+    target: new THREE.Vector3(0, 0, 0),
+    fov: 43, near: .05, far: 200, minDistance: 8, maxDistance: 50,
+  };
+  scratch.position.copy(initialPaper.position);
+  scratch.lookAt(initialPaper.target);
+  initialPaper.quaternion.copy(scratch.quaternion);
 
   const entries = {
+    paper: {
+      label: SCENE_LABELS.paper, scene: paperScene,
+      state: cloneState(initialPaper), initial: cloneState(initialPaper),
+      folders: paperFolders,
+      activate: () => paper.activate(), deactivate: () => paper.deactivate(),
+    },
     specimen: {
       label: SCENE_LABELS.specimen,
       scene: specimenScene,
@@ -160,6 +179,7 @@ export function createSceneSwitcher(gui, {
       pollen: '已隔离激活场景2：三层花粉粒子与中央能量核心',
       firework: '已隔离激活场景3：金菊主枝、冷绿闪烁簇与柳尾 Bloom',
       flower: '已隔离激活场景4：逐片展开、外瓣脱落与风中飘散',
+      paper: '已隔离激活场景5：纸飞机沿立体航道环游低多边形星球',
     }[activeId];
   }
 
@@ -193,16 +213,18 @@ export function createSceneSwitcher(gui, {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '四个场景共用开发服务器、Canvas、HDRI 和指针视差；场景1/2继续共用原梦境背景，场景3使用独立夜空，场景4使用独立动态花园背景。几何与动画互不进入对方管线，切换时分别保留四套相机角度。';
+  note.textContent = '五个场景共用开发服务器、Canvas、HDRI 和指针视差，各自保留相机角度。场景1/2共用梦境背景，场景3/4/5分别使用独立夜空、花园和粉彩天空。';
   folder.$children.appendChild(note);
 
   specimenScene.visible = true;
   pollenScene.visible = false;
   fireworkScene.visible = false;
   flowerScene.visible = false;
+  paperScene.visible = false;
   pollen.deactivate();
   firework.deactivate();
   flower.deactivate();
+  paper.deactivate();
   refreshFolders();
 
   return {
@@ -215,11 +237,13 @@ export function createSceneSwitcher(gui, {
       if (activeId === 'pollen') pollen.pauseClock();
       if (activeId === 'firework') firework.pauseClock();
       if (activeId === 'flower') flower.pauseClock();
+      if (activeId === 'paper') paper.pauseClock();
     },
     setReducedMotion(value) {
       pollen.setReducedMotion(value);
       firework.setReducedMotion(value);
       flower.setReducedMotion(value);
+      paper.setReducedMotion(value);
     },
     dispose() {
       if (disposed) return;
@@ -227,6 +251,7 @@ export function createSceneSwitcher(gui, {
       pollen.deactivate();
       firework.deactivate();
       flower.deactivate();
+      paper.deactivate();
     },
   };
 }

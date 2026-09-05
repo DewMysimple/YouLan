@@ -1,0 +1,14 @@
+{
+  "sources": {
+    "source/papierfliegerswap.blend": "481ddaf8c6e17902af27696dc7691b9df0212c51e9103368286a126f89e50d8e",
+    "source/C1123低多边形地球气球C4D模型LowPoly Earth Pack/Low-Poly-Earth fbx.fbx": "5cb24a43e1686448c576bad0f25fbaecc70cb095d6036a62b8df4c5879899d09"
+  },
+  "planeOriginalVertices": 91266,
+  "planeTriangles": 180,
+  "planetMaxRadius": 3,
+  "planetSourceObjects": [
+    "sea",
+    "land"
+  ],
+  "planeForward": "+Z"
+}
