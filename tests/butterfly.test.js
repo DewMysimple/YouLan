@@ -10,12 +10,19 @@ async function loadGeometryAndAnimation() {
   const jsonLength=file.readUInt32LE(12);
   const json=JSON.parse(file.toString('utf8',20,20+jsonLength));
   const wings=json.materials.filter(m=>m.name.includes('wing membrane'));
-  assert.equal(wings.length,2);
+  assert.equal(wings.length,4);
   for(const m of wings){
     assert.ok(m.pbrMetallicRoughness.baseColorTexture,'embedded pigment texture');
     assert.ok(m.normalTexture,'embedded vein and scale relief');
   }
-  assert.equal(json.images.length,4);
+  assert.equal(json.images.length,8);
+  const sources=wings.map(m=>json.textures[m.pbrMetallicRoughness.baseColorTexture.index].source);
+  assert.equal(new Set(sources).size,4,'each wing owns its pigment pattern');
+  const pigmentBytes=sources.map(index=>{
+    const v=json.bufferViews[json.images[index].bufferView];
+    return file.subarray(28+jsonLength+v.byteOffset,28+jsonLength+v.byteOffset+v.byteLength);
+  });
+  for(let i=0;i<4;i++)for(let j=i+1;j<4;j++)assert.ok(!pigmentBytes[i].equals(pigmentBytes[j]),'pigment images are not mirrored duplicates');
   assert.ok(json.images.every(i=>i.bufferView!==undefined&&!i.uri),'self-contained GLB textures');
   // Node has no bitmap decoder. Validate the embedded images above, then parse
   // the unmodified geometry/animation buffers; the browser suite decodes all maps.
@@ -55,7 +62,7 @@ test('exported butterfly has four animated wing hinges, continuous mirrored wing
   mixer.stopAllAction();mixer.uncacheRoot(gltf.scene);
 });
 
-test('wing surfaces keep separate slabs and clear the body throughout the complete amplitude range',async()=>{
+test('broad roots join the body while overlapping wing surfaces stay separated throughout the beat',async()=>{
   const {scene,animations}=await loadGeometryAndAnimation();
   const names=['LeftForewing','RightForewing','LeftHindwing','RightHindwing'];
   const wings=names.map(n=>scene.getObjectByName(n));
@@ -72,6 +79,10 @@ test('wing surfaces keep separate slabs and clear the body throughout the comple
     ray.set(new THREE.Vector3(sign*x,.15,5),new THREE.Vector3(0,0,-1));
     assert.ok(ray.intersectObject(scene,true).length,'continuous ivory silhouette across the wing junction');
   }
+  for(let y=-.16;y<=.34;y+=.025)for(let x=-.21;x<=.21;x+=.025){
+    ray.set(new THREE.Vector3(x,y,5),new THREE.Vector3(0,0,-1));
+    assert.ok(ray.intersectObject(scene,true).length,`filled shoulder area at ${x}, ${y}`);
+  }
   assert.equal(BUTTERFLY_DEFAULTS.amplitude,1);
   for(const weight of [0,.25,.5,.75,1]){
     action.setEffectiveWeight(weight);
@@ -83,7 +94,11 @@ test('wing surfaces keep separate slabs and clear the body throughout the comple
         const n=new THREE.Vector3(0,0,1).applyQuaternion(w.parent.getWorldQuaternion(new THREE.Quaternion()));
         let lo=Infinity,hi=-Infinity;
         for(let j=0;j<a.count;j++){
-          p.fromBufferAttribute(a,j).applyMatrix4(w.matrixWorld);b.expandByPoint(p);
+          p.fromBufferAttribute(a,j);
+          // The proximal membrane intentionally seats in the shoulder; only
+          // distal free wing surfaces must stay outside the central body envelope.
+          const distal=Math.abs(p.x)>.22;
+          p.applyMatrix4(w.matrixWorld);if(distal)b.expandByPoint(p);
           const d=p.dot(n);lo=Math.min(lo,d);hi=Math.max(hi,d);
         }
         b.slab={lo,hi};return b;

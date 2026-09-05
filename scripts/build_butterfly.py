@@ -59,8 +59,8 @@ def tube(name, points, radius, mat):
 sphere('Thorax', (0, .20, 0), (.088, .27, .087), ivory)
 sphere('Head', (0, .53, .01), (.093, .105, .085), ivory)
 for sign in (-1, 1):
-    # Small anatomical sockets bridge the hinge to the thorax without a floating root.
-    sphere('WingSocket', (sign*.108,.15,.022), (.080,.066,.041), ivory)
+    # A long, low shoulder cover joins the broad wing membrane into the thorax.
+    sphere('WingSocket', (sign*.078,.17,.027), (.053,.235,.046), ivory)
     sphere('CompoundEye', (sign*.080, .54, .042), (.038, .058, .046), eye)
     tube('Antenna', [(sign*.04,.60,.025),(sign*.18,.94,.02),
                      (sign*.43,1.50,.005),(sign*.50,1.61,.02)], .006, rose)
@@ -138,20 +138,30 @@ def image(name, rgb, color_space='sRGB'):
     return im
 
 # XY projection UVs preserve thin, branching veins without radial triangle artifacts.
-def wing_material(back):
+def wing_material(back,sign):
     size=1536
     xmin,xmax=0,2.45
-    ymin,ymax=(-1.65,.30) if back else (-.10,2.62)
+    ymin,ymax=(-1.65,.30) if back else (-.15,2.75)
     x,y=np.meshgrid(np.linspace(xmin,xmax,size,dtype=np.float32),np.linspace(ymin,ymax,size,dtype=np.float32))
-    n0=noise(x*5,y*5,2);n1=noise(x*23,y*23,8);n2=noise(x*92,y*92,4);grain=noise(x*390,y*390,9)
+    seed=(19 if sign>0 else 3)+(41 if back else 0)
+    n0=noise(x*5,y*5,seed);n1=noise(x*23,y*23,seed+7)
+    n2=noise(x*92,y*92,seed+13);grain=noise(x*390,y*390,seed+29)
     warp=(n0-.5)*.12+(n1-.5)*.055
     field=np.zeros_like(x)
     # Disconnected, ragged pigment islands, with ivory windows between the marks.
-    patches=([(1.03,-.29,.56,.19),(1.57,-.42,.25,.18),(.66,-.62,.13,.24),
-              (.80,-.90,.13,.23),(1.02,-1.15,.14,.15),(1.57,-.82,.12,.26)] if back else
-             [(1.25,1.46,.44,.50),(.87,.92,.28,.40),(1.57,1.89,.25,.31),
-              (.63,.47,.15,.20),(1.66,.58,.13,.30),(1.92,.90,.095,.29),
-              (1.86,1.50,.065,.075),(1.99,1.82,.065,.08)])
+    # Individually composed markings, not one mirrored map with a different noise seed.
+    patches={
+      (False,-1):[(1.23,1.57,.49,.54),(.85,1.04,.33,.42),(1.57,2.05,.30,.23),
+                  (.57,.52,.18,.25),(1.73,.62,.15,.35),(1.97,1.09,.10,.29),
+                  (1.94,1.83,.070,.075)],
+      (False,1):[(1.39,1.73,.37,.48),(1.01,1.30,.24,.27),(.76,.88,.16,.31),
+                 (1.51,.74,.12,.39),(1.82,1.22,.095,.39),(1.99,1.65,.075,.21),
+                 (1.03,1.95,.095,.10),(1.34,2.17,.070,.075),(.43,.48,.11,.16)],
+      (True,-1):[(.79,-.28,.39,.17),(1.30,-.35,.43,.20),(1.63,-.47,.19,.17),
+                 (.69,-.65,.12,.24),(.86,-.96,.15,.26),(1.48,-.95,.13,.22)],
+      (True,1):[(.71,-.27,.33,.13),(1.34,-.38,.29,.17),(1.69,-.34,.14,.11),
+                (.89,-.71,.15,.31),(1.19,-1.04,.16,.27),(1.61,-.80,.075,.15)]
+    }[(back,sign)]
     for cx,cy,rx,ry in patches:
         d=((x+warp-cx)/rx)**2+((y+warp*.7-cy)/ry)**2
         field=np.maximum(field,1-smooth(.63,1.2,d+(n1-.5)*.8))
@@ -169,7 +179,7 @@ def wing_material(back):
                [(2.11,2.46),(2.22,2.10),(2.14,1.73),(2.07,1.32),(1.95,.95),(1.67,.57),(1.16,.23)])
     for k,(ex,ey) in enumerate(endpoints):
         t=np.clip(x/ex,0,1)
-        curve=ey*t+(.06 if back else -.11)*np.sin(t*math.pi)
+        curve=ey*t+((.06 if back else -.11)+sign*.017*math.sin(k*2.3))*np.sin(t*math.pi)
         dist=np.abs(y-curve)/math.sqrt(1+(ey/ex)**2)
         vein=np.minimum(vein,np.where(x<=ex,dist,100))
         for branch in (.52,.72):
@@ -183,13 +193,14 @@ def wing_material(back):
     # Fine scales stay low contrast; avoid the old broad glossy stripes.
     scales=(grain-.5)*.027+(n2-.5)*.018
     rgb+=scales[:,:,None]
-    base=image(('Hind' if back else 'Fore')+' rose pigment and scales',rgb)
+    label=('Left' if sign<0 else 'Right')+('Hind' if back else 'Fore')
+    base=image(label+' rose pigment and scales',rgb)
     height=.33*ridge+.14*grain+.12*n2
     dy,dx=np.gradient(height)
     normal=np.stack([-dx*.55,-dy*.55,np.ones_like(x)],axis=-1)
     normal/=np.linalg.norm(normal,axis=-1,keepdims=True)
-    normal=image(('Hind' if back else 'Fore')+' scale relief',normal*.5+.5,'Non-Color')
-    m=material(('Hind' if back else 'Fore')+' ivory rose wing membrane',(1,1,1),.72)
+    normal=image(label+' scale relief',normal*.5+.5,'Non-Color')
+    m=material(label+' ivory rose wing membrane',(1,1,1),.72)
     nodes=m.node_tree.nodes;links=m.node_tree.links;bs=nodes.get('Principled BSDF')
     tex=nodes.new('ShaderNodeTexImage');tex.image=base;links.new(tex.outputs['Color'],bs.inputs['Base Color'])
     tex=nodes.new('ShaderNodeTexImage');tex.image=normal
@@ -197,31 +208,35 @@ def wing_material(back):
     links.new(tex.outputs['Color'],nm.inputs['Color']);links.new(nm.outputs['Normal'],bs.inputs['Normal'])
     return m,(xmin,xmax,ymin,ymax)
 
-fore=[(.012,.02),(.28,.61),(.83,1.46),(1.55,2.24),(2.08,2.49),(2.22,2.37),
-      (2.19,1.97),(2.09,1.48),(1.98,.88),(1.78,.29),(1.39,.05),(.72,-.025)]
-hind=[(.012,-.02),(.62,.18),(1.34,.22),(1.85,-.025),(2.02,-.56),
-      (1.92,-.91),(1.69,-1.23),(1.33,-1.45),(.93,-1.50),(.58,-1.27),(.26,-.74),(.06,-.23)]
+fore=[(-.10,-.10),(-.10,.22),(.10,.69),(.47,1.40),(1.05,2.14),
+      (1.68,2.55),(2.05,2.62),(2.27,2.48),(2.32,2.19),(2.26,1.78),
+      (2.16,1.31),(2.03,.82),(1.78,.29),(1.39,.05),(.72,-.025)]
+hind=[(-.10,.06),(.62,.18),(1.34,.22),(1.85,-.025),(2.02,-.56),
+      (1.92,-.91),(1.69,-1.23),(1.33,-1.45),(.93,-1.50),(.52,-1.24),
+      (.12,-.64),(-.10,-.37)]
 
 def catmull(points,t):
     n=len(points);a=t*n;i=int(a)%n;f=a-int(a)
     p0,p1,p2,p3=[Vector(points[j%n]) for j in (i-1,i,i+1,i+2)]
     return .5*((2*p1)+(-p0+p2)*f+(2*p0-5*p1+4*p2-p3)*f*f+(-p0+3*p1-3*p2+p3)*f*f*f)
 
-materials={back:wing_material(back) for back in (False,True)}
+materials={(back,sign):wing_material(back,sign) for back in (False,True) for sign in (-1,1)}
 def wing(name,outline,sign,back):
     pivot=bpy.data.objects.new(name+'Pivot',None);bpy.context.collection.objects.link(pivot)
     pivot.parent=root
-    # Entire wing stays lateral to the narrow thorax, even at 82 degrees upstroke.
+    # The proximal membrane seats under the shoulder; distal wings clear the body.
     pivot.location=B((sign*.160,.15,.022))
     nr,na=22,180;origin=Vector((.018,-.055 if back else .04))
     verts=[];uvs=[];faces=[]
-    mat,(xmin,xmax,ymin,ymax)=materials[back]
+    mat,(xmin,xmax,ymin,ymax)=materials[(back,sign)]
     for r in range(nr+1):
         t=r/nr
         for j in range(na):
             a=j/na;edge=catmull(outline,a);p=origin.lerp(edge,t)
-            p.x=max(.009,p.x)
-            scallop=.007*math.sin(a*math.tau*29)*t**12
+            p.x=max(-.10,p.x)
+            # Small outline variation, with restrained scalloping at the rounded apex.
+            p.x+=sign*.010*math.sin(a*math.tau*3+.7)*t*t*max(0,p.x)/2.4
+            scallop=.003*math.sin(a*math.tau*29+sign*.8)*t**12
             p.x+=scallop*t
             # Overlapping silhouettes, disjoint depth slabs. The separation is in
             # hinge-local geometry, so it rotates with the wings even when folded.
