@@ -1,10 +1,14 @@
 import { SCENE_LABELS } from './sceneCatalog.js';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { BUTTERFLY_FLOW_PALETTES, createButterflyFlowMaterial, syncButterflyFlowMaterial } from './butterflyFlowMaterial.js';
 
 export const BUTTERFLY_DEFAULTS = Object.freeze({
   playing: true, speed: 1, amplitude: 1, hovering: true, drift: .65,
-  wingTint: '#ffffff', iridescence: .08, environmentIntensity: .45,
+  palette: '晨光金蝶', flowing: true, flowSpeed: .34, flowScale: 3.6,
+  flowWarp: 1.35, flowContrast: 1.12,
+  flowColorA: '#ffe36f', flowColorB: '#ffbd20', flowColorC: '#ff692f',
+  emissionStrength: .68, iridescence: .12, environmentIntensity: .38,
   dust: true,
 });
 
@@ -58,12 +62,12 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
   const heading = new THREE.Group(); heading.name='蝴蝶水平迎光'; heading.rotation.x=-Math.PI/2; root.add(heading);
   const flight = new THREE.Group(); flight.name='蝴蝶悬停'; heading.add(flight);
   const dust = createDust(root);
-  root.add(new THREE.HemisphereLight('#e7eee7','#292638',1.2));
-  const key=new THREE.DirectionalLight('#fff2e5',2.1); key.position.set(-3,5,7);root.add(key);
-  const rim=new THREE.DirectionalLight('#cddcf3',1.4); rim.position.set(4,1,-5);root.add(rim);
-  let model=null,mixer=null,actions=[],loading=null,loadError=null;
-  let active=false,disposed=false,previousTimestamp=null,time=0,refresh=()=>{};
-  const state=scene.userData.butterfly={ready:false,time:0,animationClips:0};
+  root.add(new THREE.HemisphereLight('#e7eee7','#292638',.5));
+  const key=new THREE.DirectionalLight('#fff2e5',.82); key.position.set(-3,5,7);root.add(key);
+  const rim=new THREE.DirectionalLight('#cddcf3',.48); rim.position.set(4,1,-5);root.add(rim);
+  let model=null,mixer=null,actions=[],wingMaterials=[],loading=null,loadError=null;
+  let active=false,disposed=false,previousTimestamp=null,time=0,flowTime=0,refresh=()=>{};
+  const state=scene.userData.butterfly={ready:false,time:0,flowTime:0,animationClips:0};
 
   function apply() {
     if(disposed)return;
@@ -71,8 +75,8 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
     mixer?.update(0);
     model?.traverse(o=>{if(o.isMesh){
       o.material.envMapIntensity=parameters.environmentIntensity;
-      if(o.name.includes('wing')) {o.material.color.set(parameters.wingTint);o.material.iridescence=parameters.iridescence;}
     }});
+    wingMaterials.forEach(material=>syncButterflyFlowMaterial(material,parameters,flowTime));
     dust.visible=parameters.dust;
     if(!parameters.hovering){flight.position.set(0,0,0);flight.rotation.set(0,0,0);}
     previousTimestamp=null;refresh();requestRender();
@@ -86,16 +90,15 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
     }
     model=gltf.scene;
     // Capture an open-wing rest pose so action weight is an intuitive amplitude.
+    let wingIndex=0;
     model.traverse(o=>{
       if(o.name.endsWith('Pivot'))o.quaternion.identity();
       if(!o.isMesh)return;
       const old=o.material;
       if(o.name.includes('wing')) {
-        o.material=new THREE.MeshPhysicalMaterial({map:old.map,normalMap:old.normalMap,
-          normalScale:old.normalScale.clone(),side:THREE.DoubleSide,
-          roughness:.72,metalness:0,sheen:.25,sheenColor:new THREE.Color('#f5e2dc'),
-          sheenRoughness:.8,iridescence:parameters.iridescence,
-          iridescenceIOR:1.3,iridescenceThicknessRange:[180,390]});
+        o.material=createButterflyFlowMaterial(parameters,wingIndex++*2.17);
+        wingMaterials.push(o.material);
+        old.map?.dispose();old.normalMap?.dispose();
         old.dispose();
       } else {o.material.side=THREE.DoubleSide;}
     });
@@ -120,22 +123,30 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
     pauseClock(){previousTimestamp=null;},
     setReducedMotion(value){reducedMotion=value;if(value)parameters.playing=false;apply();},
     retry:ensureLoaded,
-    restore(){Object.assign(parameters,BUTTERFLY_DEFAULTS,{playing:!reducedMotion});apply();},
+    setPalette(name){
+      const colors=BUTTERFLY_FLOW_PALETTES[name];if(!colors)return;
+      [parameters.flowColorA,parameters.flowColorB,parameters.flowColorC]=colors;
+      parameters.palette=name;apply();
+    },
+    restore(){Object.assign(parameters,BUTTERFLY_DEFAULTS,{playing:!reducedMotion});flowTime=0;apply();},
     spread(){parameters.playing=false;parameters.amplitude=0;apply();},
     update(timestamp,visible=true){
       if(disposed||!active)return false;
-      const animated=!!model&&visible&&parameters.playing&&parameters.speed>0;
+      const wingAnimated=!!model&&visible&&parameters.playing&&parameters.speed>0;
+      const flowAnimated=!!model&&visible&&!reducedMotion&&parameters.flowing&&parameters.flowSpeed>0;
+      const animated=wingAnimated||flowAnimated;
       if(animated&&previousTimestamp!==null){
         const delta=Math.min(.05,Math.max(0,(timestamp-previousTimestamp)/1000));
-        time+=delta*parameters.speed;mixer.update(delta);
+        if(wingAnimated){time+=delta*parameters.speed;mixer.update(delta);
         if(parameters.hovering){
           const d=parameters.drift;
           flight.position.set(.42*Math.sin(time*.72)*d,.23*Math.sin(time*1.45)*d,.2*Math.sin(time*.5)*d);
           flight.rotation.set(.08*Math.sin(time*.9)*d,.19*Math.sin(time*.64)*d,.10*Math.sin(time*.8)*d);
-        }
+        }}
+        if(flowAnimated){flowTime+=delta*parameters.flowSpeed;wingMaterials.forEach(m=>syncButterflyFlowMaterial(m,parameters,flowTime));}
         dust.material.uniforms.time.value=time;
       }
-      previousTimestamp=animated?timestamp:null;state.time=time;return animated;
+      previousTimestamp=animated?timestamp:null;state.time=time;state.flowTime=flowTime;return animated;
     },
     dispose(){
       if(disposed)return;disposed=true;active=false;
@@ -153,7 +164,17 @@ export function bindButterflyPanel(gui,butterfly){
   folder.add(p,'hovering').name('飞行起伏').onChange(update);
   folder.add(p,'drift',0,2,.01).name('起伏幅度').onChange(update);
   folder.add({spread:()=>butterfly.spread()},'spread').name('展开翅膀观察');
-  folder.addColor(p,'wingTint').name('翅膀染色').onChange(update);
+  folder.add(p,'palette',[...Object.keys(BUTTERFLY_FLOW_PALETTES),'自定义']).name('翼面配色方案').onChange(value=>butterfly.setPalette(value));
+  const customize=folder.addFolder('程序流动混色材质');
+  customize.add(p,'flowing').name('播放色彩流动').onChange(update);
+  customize.add(p,'flowSpeed',0,2,.01).name('流动速度').onChange(update);
+  customize.add(p,'flowScale',1,8,.01).name('混色尺度').onChange(update);
+  customize.add(p,'flowWarp',0,3,.01).name('流动扭曲').onChange(update);
+  customize.add(p,'flowContrast',.5,2,.01).name('色域对比').onChange(update);
+  customize.addColor(p,'flowColorA').name('亮部奶黄').onChange(()=>{p.palette='自定义';update();});
+  customize.addColor(p,'flowColorB').name('主色亮黄').onChange(()=>{p.palette='自定义';update();});
+  customize.addColor(p,'flowColorC').name('暖部微橙').onChange(()=>{p.palette='自定义';update();});
+  customize.add(p,'emissionStrength',0,4,.01).name('局部自发光').onChange(update);
   folder.add(p,'iridescence',0,1,.01).name('翅面虹彩').onChange(update);
   folder.add(p,'environmentIntensity',0,2,.01).name('HDRI 质感强度').onChange(update);
   folder.add(p,'dust').name('林间微光').onChange(update);
@@ -164,8 +185,8 @@ export function bindButterflyPanel(gui,butterfly){
   butterfly.onPanelRefresh(()=>{
     status.dataset.kind=butterfly.loadError?'error':butterfly.ready?'ready':'loading';
     status.textContent=butterfly.loadError?`蝴蝶加载失败：${butterfly.loadError.message}`
-      :butterfly.ready?'四片独立翅膀 · 循环扇动 · 可拖动观察':'首次进入时加载蝴蝶模型…';
-    retry.show(!!butterfly.loadError);folder.controllers.forEach(c=>c.updateDisplay());
+      :butterfly.ready?'无贴图程序混色 · 局部自发光 · 六套配色可选':'首次进入时加载蝴蝶模型…';
+    retry.show(!!butterfly.loadError);folder.controllersRecursive().forEach(c=>c.updateDisplay());
   });
   butterfly.apply();return folder;
 }

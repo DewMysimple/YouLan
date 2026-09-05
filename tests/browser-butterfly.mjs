@@ -49,21 +49,40 @@ try {
     isolated:!bf.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS')&&!scene.visible})`);
   assert.equal(report.model.clips,1);assert.equal(report.model.canvasCount,1);
   assert.equal(report.model.sharedHDRI,true);assert.equal(report.model.isolated,true);
-  report.textures=await b.evaluate(`['LeftForewing','RightForewing','LeftHindwing','RightHindwing'].map(n=>{
+  report.materials=await b.evaluate(`['LeftForewing','RightForewing','LeftHindwing','RightHindwing'].map(n=>{
     const m=bf.getObjectByName(n).material;
-    return {name:n,colorWidth:m.map?.image.width,reliefWidth:m.normalMap?.image.width,metalness:m.metalness};
+    const u=m.userData.butterflyFlowUniforms;
+    return {name:n,map:!!m.map,normalMap:!!m.normalMap,materialName:m.name,
+      physical:m.isMeshPhysicalMaterial,metalness:m.metalness,roughness:m.roughness,
+      colors:[u.butterflyFlowColorA.value.getHexString(),u.butterflyFlowColorB.value.getHexString(),u.butterflyFlowColorC.value.getHexString()],
+      emission:u.butterflyFlowEmission.value};
   })`);
-  assert.ok(report.textures.every(t=>t.colorWidth===1536&&t.reliefWidth===1536&&t.metalness===0));
+  assert.ok(report.materials.every(m=>!m.map&&!m.normalMap&&m.physical&&m.metalness===0&&m.roughness>.35));
+  assert.ok(report.materials.every(m=>m.materialName==='程序流动混色自发光翼面'&&m.colors.join()==='ffe36f,ffbd20,ff692f'&&m.emission>0));
   await b.evaluate(`folder(['场景7·蝶翼']).classList.remove('closed');void 0`);
   await b.screenshot('01-wingbeat.png');
   await b.set(panel,'播放扇翅',false);await b.delay(150);
-  const paused=await b.evaluate('({time:bf.userData.butterfly.time,q:hinge.quaternion.toArray(),renders:bfRenders})');
+  const paused=await b.evaluate('({time:bf.userData.butterfly.time,flowTime:bf.userData.butterfly.flowTime,q:hinge.quaternion.toArray()})');
   await b.delay(250);
-  assert.deepEqual(await b.evaluate('({time:bf.userData.butterfly.time,q:hinge.quaternion.toArray(),renders:bfRenders})'),paused);
-  report.pauseOnDemand=true;
+  const flowOnly=await b.evaluate('({time:bf.userData.butterfly.time,flowTime:bf.userData.butterfly.flowTime,q:hinge.quaternion.toArray()})');
+  assert.equal(flowOnly.time,paused.time);assert.deepEqual(flowOnly.q,paused.q);assert.ok(flowOnly.flowTime>paused.flowTime);
+  await b.set([...panel,'程序流动混色材质'],'播放色彩流动',false);await b.delay(100);
+  const fullyPaused=await b.evaluate('({time:bf.userData.butterfly.time,flowTime:bf.userData.butterfly.flowTime,renders:bfRenders})');
+  await b.delay(250);
+  assert.deepEqual(await b.evaluate('({time:bf.userData.butterfly.time,flowTime:bf.userData.butterfly.flowTime,renders:bfRenders})'),fullyPaused);
+  report.independentFlowAndPause=true;
+  await b.set([...panel,'程序流动混色材质'],'播放色彩流动',true);
   await b.click(panel,'展开翅膀观察');await b.delay(100);
   assert.ok(await b.evaluate('Math.abs(hinge.quaternion.w-1)<1e-6'));
   await b.screenshot('02-open-wings.png');
+  report.palettes={};
+  for(const name of ['晨光金蝶','柠檬萤火','杏桃日晕','蜂蜜琥珀','月白金辉','青柠暖焰']){
+    await b.set(panel,'翼面配色方案',name);await b.delay(120);
+    report.palettes[name]=await b.evaluate(`bf.getObjectByName('LeftForewing').material.userData.butterflyFlowUniforms.butterflyFlowColorB.value.getHexString()`);
+    await b.screenshot('palette-'+name+'.png');
+  }
+  assert.equal(Object.keys(report.palettes).length,6);
+  await b.set(panel,'翼面配色方案','晨光金蝶');
   await b.set(panel,'飞行起伏',false);
   await b.screenshot('10-horizontal-toward-sun.png');
   await b.set(['梦境背景与迎光'],'迎光放射强度',0);
@@ -143,7 +162,8 @@ try {
   await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
   await b.click(select,'重置当前场景视角');await b.click(panel,'重置蝴蝶');
   // Direct preview uses the normal scene entry, with the same single canvas.
-  await b.send('Page.navigate',{url:'http://127.0.0.1:5173/?scene=butterfly'});
+  const directUrl=new URL(process.env.VIEWER_URL || 'http://127.0.0.1:5173/');directUrl.search='?scene=butterfly';
+  await b.send('Page.navigate',{url:directUrl.href});
   await b.until(`document.querySelector('.viewer-scene-status')?.dataset.scene==='butterfly'&&document.querySelector('.viewer-butterfly-status')?.dataset.kind==='ready'`);
   report.directEntry=true;
   await b.delay(250);await b.screenshot('04-direct-preview.png');
