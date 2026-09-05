@@ -198,7 +198,7 @@ export function createSceneSwitcher(gui, {
       pollen: '已隔离激活场景2：三层花粉粒子与中央能量核心',
       firework: '已隔离激活场景3：金菊主枝、冷绿闪烁簇与柳尾 Bloom',
       flower: '已隔离激活场景4：逐片展开、外瓣脱落与风中飘散',
-      butterfly: '已激活场景6：蓝色蝴蝶与循环扇翅动画',
+      butterfly: '已激活场景6：奶白玫瑰蝶与循环扇翅动画',
       paper: '已隔离激活场景5：纸飞机沿立体航道环游低多边形星球',
     }[activeId];
   }

@@ -33,6 +33,11 @@ try {
     isolated:!bf.getObjectByName('SPECIMEN_FRAME_MATERIAL_SLOTS')&&!scene.visible})`);
   assert.equal(report.model.clips,1);assert.equal(report.model.canvasCount,1);
   assert.equal(report.model.sharedHDRI,true);assert.equal(report.model.isolated,true);
+  report.textures=await b.evaluate(`['LeftForewing','RightForewing','LeftHindwing','RightHindwing'].map(n=>{
+    const m=bf.getObjectByName(n).material;
+    return {name:n,colorWidth:m.map?.image.width,reliefWidth:m.normalMap?.image.width,metalness:m.metalness};
+  })`);
+  assert.ok(report.textures.every(t=>t.colorWidth===1536&&t.reliefWidth===1536&&t.metalness===0));
   await b.evaluate(`folder(['场景6·蝶翼']).classList.remove('closed');void 0`);
   await b.screenshot('01-wingbeat.png');
   await b.set(panel,'播放扇翅',false);await b.delay(150);
@@ -43,6 +48,24 @@ try {
   await b.click(panel,'展开翅膀观察');await b.delay(100);
   assert.ok(await b.evaluate('Math.abs(hinge.quaternion.w-1)<1e-6'));
   await b.screenshot('02-open-wings.png');
+  await b.set(panel,'飞行起伏',false);
+  // Inspect exact poses from the exported clip with the normal scene animation paused.
+  await b.evaluate(`(async()=>{
+    const THREE=await import('/source/threejs-transmission/build/three.module.js');
+    const {GLTFLoader}=await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
+    const {disposeButterflyTree}=await import('/src/viewer/butterflyScene.js');
+    const exported=await new GLTFLoader().loadAsync('/models/blue-morpho-butterfly.glb');
+    window.poseMixer=new THREE.AnimationMixer(bf.getObjectByName('Butterfly'));
+    poseMixer.clipAction(exported.animations[0]).play();disposeButterflyTree(exported.scene);
+    __camera.position.set(4.7,2.7,7);__camera.lookAt(0,.35,0);
+  })()`);
+  for(const [time,label] of [[.2,'05-upstroke-82'],[.6,'06-downstroke-43']]){
+    await b.evaluate(`poseMixer.setTime(${time});__renderer.render(bf,__camera);`);
+    await b.screenshot(label+'.png');
+  }
+  await b.evaluate('poseMixer.stopAllAction();poseMixer.uncacheRoot(bf.getObjectByName("Butterfly"));delete window.poseMixer;');
+  await b.click(select,'重置当前场景视角');
+  report.extremePoses=true;
   await b.set(panel,'林间微光',false);await b.delay(100);
   assert.equal(await b.evaluate(`bf.getObjectByName('林间微尘与远处散景').visible`),false);
   await b.click(panel,'重置蝴蝶');

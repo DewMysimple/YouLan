@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export const BUTTERFLY_DEFAULTS = Object.freeze({
-  playing: true, speed: 1, amplitude: .85, hovering: true, drift: .65,
-  wingTint: '#ffffff', iridescence: .65, environmentIntensity: .45,
+  playing: true, speed: 1, amplitude: 1, hovering: true, drift: .65,
+  wingTint: '#ffffff', iridescence: .08, environmentIntensity: .45,
   dust: true, backgroundTop: '#284b50', backgroundBottom: '#080e22',
 });
 
@@ -73,9 +73,9 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
   const root = new THREE.Group(); root.name='场景6·蝶翼'; scene.add(root);
   const flight = new THREE.Group(); flight.name='蝴蝶悬停'; root.add(flight);
   const background = createBackdrop(root, parameters), dust = createDust(root);
-  root.add(new THREE.HemisphereLight('#c7f6ed','#202038',1.8));
-  const key=new THREE.DirectionalLight('#fff2d6',3.2); key.position.set(-3,5,7);root.add(key);
-  const rim=new THREE.DirectionalLight('#89b7ff',2.8); rim.position.set(4,1,-5);root.add(rim);
+  root.add(new THREE.HemisphereLight('#e7eee7','#292638',1.2));
+  const key=new THREE.DirectionalLight('#fff2e5',2.1); key.position.set(-3,5,7);root.add(key);
+  const rim=new THREE.DirectionalLight('#cddcf3',1.4); rim.position.set(4,1,-5);root.add(rim);
   let model=null,mixer=null,actions=[],loading=null,loadError=null;
   let active=false,disposed=false,previousTimestamp=null,time=0,refresh=()=>{};
   const state=scene.userData.butterfly={ready:false,time:0,animationClips:0};
@@ -108,8 +108,10 @@ export function createButterflyScene(scene, requestRender, { reducedMotion = fal
       if(!o.isMesh)return;
       const old=o.material;
       if(o.name.includes('wing')) {
-        o.material=new THREE.MeshPhysicalMaterial({vertexColors:true,side:THREE.DoubleSide,
-          roughness:.42,metalness:.16,iridescence:parameters.iridescence,
+        o.material=new THREE.MeshPhysicalMaterial({map:old.map,normalMap:old.normalMap,
+          normalScale:old.normalScale.clone(),side:THREE.DoubleSide,
+          roughness:.72,metalness:0,sheen:.25,sheenColor:new THREE.Color('#f5e2dc'),
+          sheenRoughness:.8,iridescence:parameters.iridescence,
           iridescenceIOR:1.3,iridescenceThicknessRange:[180,390]});
         old.dispose();
       } else {o.material.side=THREE.DoubleSide;}
