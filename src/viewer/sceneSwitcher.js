@@ -9,6 +9,7 @@ export const SCENE_LABELS = Object.freeze({
   butterfly: '场景6·蝶翼',
   dappled: '场景7·斑驳光影',
   gallery: '场景8·纵深花廊',
+  sketchbook: '场景9·狮城手记',
 });
 
 function cameraState(camera, controls) {
@@ -66,6 +67,7 @@ export function createSceneSwitcher(gui, {
   dappled,
   galleryScene,
   gallery,
+  sketchbookScene, sketchbook,
   specimenFolders,
   pollenFolders,
   fireworkFolders,
@@ -74,6 +76,7 @@ export function createSceneSwitcher(gui, {
   butterflyFolders,
   dappledFolders,
   galleryFolders,
+  sketchbookFolders,
   worldFolders,
 }) {
   const initialSpecimen = cameraState(camera, controls);
@@ -138,6 +141,12 @@ export function createSceneSwitcher(gui, {
   initialButterfly.quaternion.copy(scratch.quaternion);
 
   const entries = {
+    sketchbook: {
+      label: SCENE_LABELS.sketchbook, scene: sketchbookScene,
+      state: cloneState(initialSpecimen), initial: cloneState(initialSpecimen),
+      folders: sketchbookFolders,
+      activate: () => sketchbook.activate(), deactivate: () => sketchbook.deactivate(),
+    },
     gallery: {
       label: SCENE_LABELS.gallery, scene: galleryScene,
       state: cloneState(initialSpecimen), initial: cloneState(initialSpecimen),
@@ -211,7 +220,7 @@ export function createSceneSwitcher(gui, {
   status.className = 'viewer-scene-status';
 
   function refreshFolders() {
-    worldFolders.forEach(item => item.show(!['dappled', 'firework', 'gallery'].includes(activeId)));
+    worldFolders.forEach(item => item.show(!['dappled', 'firework', 'gallery', 'sketchbook'].includes(activeId)));
     for (const [id, entry] of Object.entries(entries)) {
       entry.folders.forEach((item) => item.show(id === activeId));
     }
@@ -225,6 +234,7 @@ export function createSceneSwitcher(gui, {
       paper: '已隔离激活场景5：纸飞机沿立体航道环游低多边形星球',
       dappled: '场景7：移动指针，让斑驳暖光随之聚散',
       gallery: '场景8：滚轮或上下拖动穿行 · 移动指针产生视差',
+      sketchbook: '场景9：左右拖动翻页 · 拖动放大镜 · 向下滚动查看目录',
     }[activeId];
   }
 
@@ -233,14 +243,14 @@ export function createSceneSwitcher(gui, {
     parallax.resetInput({ immediate: true, clearOrigin: true });
     const current = entries[activeId];
     current.deactivate();
-    if (['dappled', 'gallery'].includes(activeId)) controls.enabled = worldControlsEnabled;
+    if (['dappled', 'gallery', 'sketchbook'].includes(activeId)) controls.enabled = worldControlsEnabled;
     current.state = cameraState(camera, controls);
     current.scene.visible = false;
     activeId = nextId;
     const next = entries[activeId];
     next.scene.visible = true;
     restoreCamera(camera, controls, next.state);
-    if (['dappled', 'gallery'].includes(activeId)) {
+    if (['dappled', 'gallery', 'sketchbook'].includes(activeId)) {
       worldControlsEnabled = controls.enabled;
       controls.enabled = false;
     }
@@ -256,6 +266,7 @@ export function createSceneSwitcher(gui, {
   folder.add({ resetView() {
     if (activeId === 'dappled') { dappled.center(); return; }
     if (activeId === 'gallery') { gallery.center(); return; }
+    if (activeId === 'sketchbook') { sketchbook.center(); return; }
     if (activeId === 'paper') paper.skipIntro();
     const entry = entries[activeId];
     entry.state = cloneState(entry.initial);
@@ -266,7 +277,7 @@ export function createSceneSwitcher(gui, {
   folder.$children.appendChild(status);
   const note = document.createElement('div');
   note.className = 'viewer-effect-note';
-  note.textContent = '各场景共用页面并独立切换。场景1–6保留各自的三维视角；场景7是平面光影；场景8使用滚轮穿行花廊，重置视角可回到第一幅。';
+  note.textContent = '各场景共用页面并独立切换。场景1–6保留各自的三维视角；场景7是平面光影；场景8使用滚轮穿行花廊，重置视角可回到第一幅；场景9是可翻阅的水彩手记。';
   folder.$children.appendChild(note);
 
   specimenScene.visible = true;
@@ -277,6 +288,7 @@ export function createSceneSwitcher(gui, {
   butterflyScene.visible = false;
   dappledScene.visible = false;
   galleryScene.visible = false;
+  sketchbookScene.visible = false;
   pollen.deactivate();
   firework.deactivate();
   flower.deactivate();
@@ -284,6 +296,7 @@ export function createSceneSwitcher(gui, {
   butterfly.deactivate();
   dappled.deactivate();
   gallery.deactivate();
+  sketchbook.deactivate();
   refreshFolders();
 
   return {
@@ -300,6 +313,7 @@ export function createSceneSwitcher(gui, {
       if (activeId === 'butterfly') butterfly.pauseClock();
       if (activeId === 'dappled') dappled.pauseClock();
       if (activeId === 'gallery') gallery.pauseClock();
+      if (activeId === 'sketchbook') sketchbook.pauseClock();
     },
     setReducedMotion(value) {
       pollen.setReducedMotion(value);
@@ -309,6 +323,7 @@ export function createSceneSwitcher(gui, {
       butterfly.setReducedMotion(value);
       dappled.setReducedMotion(value);
       gallery.setReducedMotion(value);
+      sketchbook.setReducedMotion(value);
     },
     dispose() {
       if (disposed) return;
@@ -320,7 +335,8 @@ export function createSceneSwitcher(gui, {
       butterfly.deactivate();
       dappled.deactivate();
       gallery.deactivate();
-      if (['dappled', 'gallery'].includes(activeId)) controls.enabled = worldControlsEnabled;
+      sketchbook.deactivate();
+      if (['dappled', 'gallery', 'sketchbook'].includes(activeId)) controls.enabled = worldControlsEnabled;
     },
   };
 }

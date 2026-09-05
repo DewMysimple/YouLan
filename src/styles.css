@@ -19,6 +19,11 @@ body,
   height: 100%;
 }
 
+.viewer-sketchbook { position: absolute; inset: 0; z-index: 2; background: #ece7dc; }
+.viewer-sketchbook[hidden] { display: none; }
+.has-sketchbook > canvas { visibility: hidden; }
+body:has(.has-sketchbook) .lil-gui.root.closed { width: 132px !important; }
+
 html,
 body {
   margin: 0;

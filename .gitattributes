@@ -1,0 +1,4 @@
+# Byte-exact upstream source and font/image assets are verified by SHA-256.
+source/threeui-sketchbook/** -text
+src/viewer/sketchbook/vendor/** -text
+public/landing-pages/** -text

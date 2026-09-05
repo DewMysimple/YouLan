@@ -1,0 +1,37 @@
+/* Appended after the authored typography recipe; original artwork stays intact. */
+:root { color-scheme: light; --display: 'Instrument Serif', 'Songti SC', 'SimSun', serif; --font: 'Newsreader', 'Songti SC', 'SimSun', serif; }
+body, .top .name, .plate .t { font-family: var(--font); }
+.top .name, .plate .t { font-family: var(--display); }
+.top { gap: 9px; }
+.top nav a { display: inline-flex; align-items: center; min-height: 40px; }
+.hero { padding-top: 130px; overflow: clip; }
+.hero-kicker { letter-spacing: .22em; line-height: 1.8; padding: 0 24px; }
+.sb-caption { font-size: 15px; letter-spacing: .12em; }
+.sb-hint { font-size: 12px; line-height: 1.8; color: var(--ink-soft); }
+.bio { line-height: 2; text-wrap: pretty; }
+.section-label { font-size: 13px; }
+.about, .plates { scroll-margin-top: 140px; }
+.tool { width: 40px; height: 40px; }
+.sb-arrow { min-width: 40px; min-height: 44px; }
+.loupe:not(.on) { visibility: hidden; }
+.loupe, .loupe .ring, .loupe .grip { touch-action: none; }
+.zoomwrap { display: block; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--earth); outline-offset: 4px; }
+.sb-zone:focus-visible { outline-offset: -8px; }
+.tool:active { scale: .96; }
+.scene-paused *, .scene-paused *::before, .scene-paused *::after { animation-play-state: paused !important; }
+.scene-reduced *, .scene-reduced *::before, .scene-reduced *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+.sketchbook-load-error { padding: 12px; text-align: center; color: #7f3028; }
+@media (pointer: coarse) { .loupe { display: block; } }
+@media (max-width: 640px) {
+  .top { align-items: flex-start; text-align: left; padding: 20px 20px 35px; }
+  .top nav { gap: 20px; }
+  .top .name { font-size: 24px; }
+  .hero { min-height: 100svh; padding-top: 150px; padding-bottom: 90px; }
+  .hero-kicker { font-size: 12px; }
+  .sb-wrap { gap: 24px; }
+  .sb-hint { max-width: 300px; font-size: 12px; }
+  .plate { grid-template-columns: 2em minmax(0,1fr) auto; gap: 8px; }
+  .plate .t { font-size: 20px; }
+  .plate .p { font-size: 11px; letter-spacing: 0; }
+}

@@ -20,6 +20,7 @@ supersedes: null
 | 2026-09-05 | feature | 用户认为原场景3过于单薄，要求结合提供的视频与指尖烟花网站深度改造；随后明确要求保留 Three.js 旋转。 | archived | scene3-painted-fireworks-orbit-audio | [[日志/2026-09-05-深度改造场景3为可旋转指尖彩色花火.md|2026-09-05｜深度改造场景3为可旋转指尖彩色花火]] |
 | 2026-09-05 | feature | 根据参考视频与用户模型，在同一开发服务器增加大量纸飞机沿路径绕星球旋转的下一个场景。 | archived | paper-plane-planet-scene | [[日志/2026-09-05-新增纸飞机环游星球场景.md|2026-09-05｜新增纸飞机环游星球场景]] |
 | 2026-09-05 | feature | 结合 Microsoft AI 网站和用户本地演示视频，在场景7实现指针移动驱动的斑驳光影。用户指出效果可能并非三维景物。 | archived | scene7-screen-space-dappled-light | [[日志/2026-09-05-新增微软参考二维斑驳光影场景7.md|2026-09-05｜新增微软参考二维斑驳光影场景7]] |
+| 2026-09-05 | feature | 用户指定参考 ThreeUI 的 Meng To Sketchbook 页面及随附精确源码提示词，进行本地化并添加下一个场景。 | archived | scene9-threeui-sketchbook | [[日志/2026-09-05-接入ThreeUI狮城手记场景9.md|2026-09-05｜接入ThreeUI狮城手记场景9]] |
 | 2026-09-05 | feature | 用户指定把本机 `codrops-depth-gallery` 加到下一个场景，并做适配性参数调整。 | archived | scene8-codrops-depth-gallery | [[日志/2026-09-05-接入Codrops纵深花廊场景8.md|2026-09-05｜接入Codrops纵深花廊场景8]] |
 | 2026-09-05 | feature | 用户指定按参考图的奶白、玫瑰红斑纹与轮廓重做场景6蝴蝶，缩细并精细化身体，修正扇翅穿模、增加上翻幅度，保留飞行节奏。 | archived | ivory-rose-butterfly-continuous-wing-junction | [[日志/2026-09-05-按参考重做玫瑰蝶并修复翅膀衔接.md|2026-09-05｜按参考重做玫瑰蝶并修复翅膀衔接]] |
 | 2026-09-05 | feature | - | archived | rebuild-independent-petal-bloom-and-flight | [[日志/2026-09-05-按参考工程重构逐瓣绽放与脱落飘散.md|2026-09-05｜按参考工程重构逐瓣绽放与脱落飘散]] |
