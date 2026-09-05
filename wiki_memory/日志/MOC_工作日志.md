@@ -17,6 +17,7 @@ supersedes: null
 | --- | --- | --- | --- | --- | --- |
 | 2026-09-05 | feature | 根据参考视频与用户模型，在同一开发服务器增加大量纸飞机沿路径绕星球旋转的下一个场景。 | archived | paper-plane-planet-scene | [[日志/2026-09-05-新增纸飞机环游星球场景.md|2026-09-05｜新增纸飞机环游星球场景]] |
 | 2026-09-05 | feature | - | archived | rebuild-independent-petal-bloom-and-flight | [[日志/2026-09-05-按参考工程重构逐瓣绽放与脱落飘散.md|2026-09-05｜按参考工程重构逐瓣绽放与脱落飘散]] |
+| 2026-09-05 | feature | 正式展示星球场景前，画面只有一架纸飞机，相机跟随其飞行，再带出星球和机群。 | archived | paper-plane-camera-intro | [[日志/2026-09-05-增加纸飞机跟随入场镜头.md|2026-09-05｜增加纸飞机跟随入场镜头]] |
 | 2026-09-04 | discussion | - | archived | retain-hdri-after-removal-audit | [[日志/2026-09-04-评估HDRI移除并决定保留.md|2026-09-04｜评估 HDRI 移除并决定保留]] |
 | 2026-09-04 | feature | - | archived | infinite-sun-depth-panel | [[日志/2026-09-04-统一纵深面板并增加无限远太阳.md|统一纵深面板并增加无限远太阳]] |
 | 2026-09-04 | bug | - | archived | pointer-camera-parallax | [[日志/2026-09-04-深度修复指针视差与轨道交接.md|2026-09-04｜深度修复指针视差与轨道交接]] |

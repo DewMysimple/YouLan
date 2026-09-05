@@ -314,8 +314,9 @@ export function createSpecimenViewer(container, { onError } = {}) {
       if (!disposed) {
         const activeSceneId = sceneSwitcher?.activeId ?? 'specimen';
         if (activeSceneId === 'specimen') depthStack?.flush();
-        const parallaxAnimated = pointerParallax?.update(timestamp) ?? false;
-        pointerParallax?.apply();
+        const cinematicCamera = activeSceneId === 'paper' && paper?.ownsCamera;
+        const parallaxAnimated = cinematicCamera ? false : pointerParallax?.update(timestamp) ?? false;
+        if (!cinematicCamera) pointerParallax?.apply();
         let atmosphereAnimated = false;
         let pollenAnimated = false;
         let fireworkAnimated = false;
@@ -362,7 +363,10 @@ export function createSpecimenViewer(container, { onError } = {}) {
   flower = createInfiniteBloomScene(flowerScene, renderer, requestRender, {
     reducedMotion: motionPreference.matches,
   });
-  paper = createPaperOrbitScene(paperScene, requestRender, { reducedMotion: motionPreference.matches });
+  paper = createPaperOrbitScene(paperScene, requestRender, {
+    reducedMotion: motionPreference.matches, camera, controls,
+    resetParallax: () => pointerParallax.resetInput({ immediate: true, clearOrigin: true }),
+  });
   fireworkPost = createFireworkPost(
     renderer,
     fireworkScene,

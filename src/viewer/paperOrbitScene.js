@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MAX_PLANES, TAU, createLanes, seededRandom, sampleOrbit, installOrbitShader } from './paperOrbitMotion.js';
+import { createPaperOrbitIntro } from './paperOrbitIntro.js';
 
 export const PAPER_ORBIT_DEFAULTS = Object.freeze({
   playing: true, count: 2400, speed: 1, size: .22, radius: 4.3, flutter: .28,
@@ -50,7 +51,7 @@ function createBackdrop(parameters) {
   return mesh;
 }
 
-export function createPaperOrbitScene(scene, requestRender, { reducedMotion = false } = {}) {
+export function createPaperOrbitScene(scene, requestRender, { reducedMotion = false, camera, controls, resetParallax = () => {} } = {}) {
   const parameters = { ...PAPER_ORBIT_DEFAULTS, playing: !reducedMotion };
   const root = new THREE.Group();
   root.name = '场景5·纸飞机环游星球';
@@ -96,6 +97,55 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
   let loading = null, loadError = null, panelRefresh = () => {};
   let routeSignature = '';
   scene.userData.paperOrbit = { ready: false, count: parameters.count, time: 0 };
+  let hero = null, leadScale = 1, firstVisit = true;
+  const intro = createPaperOrbitIntro({ camera, controls, resetParallax, requestRender,
+    onChange(value) {
+      const oldState = scene.userData.paperOrbit.intro?.state;
+      scene.userData.paperOrbit.intro = value;
+      syncIntroVisibility();
+      if (value.state !== oldState) panelRefresh();
+    },
+  });
+
+  function syncIntroVisibility() {
+    const state = scene.userData.paperOrbit.intro?.state;
+    const waiting = state === 'waiting', flying = state === 'flying';
+    // At t=0 the camera faces away from the world; the reveal comes from its
+    // physical turn, with no planet scaling, opacity trick or scene cut.
+    planet.visible = halo.visible = !waiting;
+    paths.visible = parameters.showPaths && !waiting && !flying;
+    if (hero) hero.visible = flying;
+    if (planes) {
+      planes.visible = !waiting;
+      const data = planes.geometry.attributes.orbitData;
+      const size = waiting || flying ? 0 : leadScale;
+      if (data.getW(0) !== size) { data.setW(0, size); data.needsUpdate = true; }
+    }
+  }
+
+  function sampleLead() {
+    const data = planes.geometry.attributes.orbitData, offsets = planes.geometry.attributes.orbitOffset;
+    const angle = data.getZ(0) + uniforms.orbitTime.value * data.getY(0);
+    const lead = sampleOrbit(lanes[0], angle, parameters.radius + data.getX(0), parameters.flutter, offsets.getX(0));
+    const right = new THREE.Vector3().crossVectors(lead.position.clone().normalize(), lead.direction).normalize();
+    const up = new THREE.Vector3().crossVectors(lead.direction, right);
+    const bank = offsets.getY(0) + .2 * Math.sin(2 * angle);
+    lead.quaternion = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(
+      right.clone().multiplyScalar(Math.cos(bank)).addScaledVector(up, Math.sin(bank)),
+      up.multiplyScalar(Math.cos(bank)).addScaledVector(right, -Math.sin(bank)), lead.direction));
+    lead.size = parameters.size * leadScale;
+    return lead;
+  }
+
+  function beginIntro() {
+    if (planes) {
+      const data = planes.geometry.attributes.orbitData;
+      data.setZ(0, Math.PI / 2 - uniforms.orbitTime.value * data.getY(0));
+      data.needsUpdate = true;
+    }
+    previousTimestamp = null;
+    intro.start();
+  }
 
   function rebuildPaths() {
     const signature = `${parameters.radius}/${parameters.flutter}`;
@@ -123,6 +173,10 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
     uniforms.orbitSize.value = parameters.size;
     uniforms.orbitFlutter.value = parameters.flutter;
     if (planes) { planes.count = parameters.count; planes.material.color.set(parameters.paperColor); }
+    if (hero) {
+      const tint = new THREE.Color(); planes.getColorAt(0, tint);
+      hero.material.color.set(parameters.paperColor).multiply(tint);
+    }
     planet.traverse(object => {
       if (!object.isMesh) return;
       object.material.color.set(object.name === 'EarthOcean' ? parameters.oceanColor : parameters.landColor);
@@ -134,6 +188,7 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
     sky.skyBottom.value.set(parameters.backgroundBottom);
     sky.skyAccent.value.set(parameters.backgroundAccent);
     paths.visible = parameters.showPaths;
+    syncIntroVisibility();
     paths.material.opacity = parameters.pathOpacity;
     rebuildPaths();
     previousTimestamp = null;
@@ -165,6 +220,10 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
       color: parameters.paperColor, roughness: .9, metalness: 0,
       side: THREE.DoubleSide, envMapIntensity: .18,
     });
+    hero = new THREE.Mesh(geometry, paperMaterial.clone());
+    hero.name = '入场领航纸飞机';
+    hero.visible = false;
+    root.add(hero);
     installOrbitShader(paperMaterial, uniforms);
     planes = new THREE.InstancedMesh(geometry, paperMaterial, MAX_PLANES);
     planes.name = '万架纸飞机·GPU航道';
@@ -184,6 +243,9 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
     for (const [name, values, size] of [['orbitU', u, 3], ['orbitV', v, 3], ['orbitData', data, 4], ['orbitOffset', offsets, 2]]) {
       geometry.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(values), size));
     }
+    leadScale = geometry.attributes.orbitData.getW(0);
+    // Reserve one identifiable aircraft for the intro-to-flock handoff.
+    geometry.attributes.orbitData.setZ(0, Math.PI / 2);
     root.add(planes);
     disposeTree(aircraft);
     globe.traverse(object => { if (object.isMesh) {
@@ -211,14 +273,22 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
   apply();
   return {
     parameters, root, uniforms, apply,
+    get ownsCamera() { return intro.ownsCamera; },
     get planes() { return planes; },
     get loadError() { return loadError; },
     onPanelRefresh(callback) { panelRefresh = callback; },
-    activate() { active = true; previousTimestamp = null; void ensureLoaded(); requestRender(); },
-    deactivate() { active = false; previousTimestamp = null; },
-    pauseClock() { previousTimestamp = null; },
+    activate() {
+      active = true; previousTimestamp = null;
+      if (firstVisit && !reducedMotion) beginIntro();
+      firstVisit = false;
+      void ensureLoaded(); requestRender();
+    },
+    deactivate() { intro.finish(); active = false; previousTimestamp = null; },
+    pauseClock() { previousTimestamp = null; intro.pauseClock(); },
+    replayIntro() { if (active && !reducedMotion) beginIntro(); },
+    skipIntro() { intro.finish(); },
     retry() { void ensureLoaded(); },
-    setReducedMotion(value) { reducedMotion = value; if (value) parameters.playing = false; apply(); },
+    setReducedMotion(value) { reducedMotion = value; if (value) { parameters.playing = false; intro.finish(); } apply(); },
     restore() { Object.assign(parameters, PAPER_ORBIT_DEFAULTS, { playing: !reducedMotion }); apply(); },
     update(timestamp, visible = true) {
       if (disposed || !active) return false;
@@ -231,11 +301,12 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
       }
       previousTimestamp = animated ? timestamp : null;
       scene.userData.paperOrbit.time = uniforms.orbitTime.value;
-      return animated;
+      const introAnimated = intro.update(timestamp, visible, planes && intro.ownsCamera ? sampleLead() : null, hero);
+      return animated || introAnimated;
     },
     dispose() {
       if (disposed) return;
-      disposed = true; root.removeFromParent(); disposeTree(root);
+      intro.finish(); disposed = true; root.removeFromParent(); disposeTree(root);
       scene.userData.paperOrbit = null; panelRefresh = () => {};
     },
   };
@@ -244,6 +315,8 @@ export function createPaperOrbitScene(scene, requestRender, { reducedMotion = fa
 export function bindPaperOrbitPanel(gui, paper) {
   const folder = gui.addFolder('场景5·纸飞机环游');
   const p = paper.parameters, update = () => paper.apply();
+  folder.add({ replay: () => paper.replayIntro() }, 'replay').name('重播入场');
+  const skip = folder.add({ skip: () => paper.skipIntro() }, 'skip').name('跳过入场');
   folder.add(p, 'playing').name('播放环游').onChange(update);
   folder.add(p, 'count', 0, MAX_PLANES, 100).name('纸飞机数量').onChange(update);
   folder.add(p, 'speed', 0, 2, .01).name('飞行速度').onChange(update);
@@ -272,6 +345,7 @@ export function bindPaperOrbitPanel(gui, paper) {
       : paper.planes ? `${p.count.toLocaleString()} 架纸飞机 · 9 条立体航道`
         : '首次进入时加载纸飞机与低多边形地球…';
     retry.show(!!paper.loadError);
+    skip.show(paper.ownsCamera);
     folder.controllers.forEach(controller => controller.updateDisplay());
   };
   paper.onPanelRefresh(refresh); refresh();

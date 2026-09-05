@@ -187,8 +187,8 @@ export function createSceneSwitcher(gui, {
     if (disposed || !entries[nextId] || nextId === activeId) return;
     parallax.resetInput({ immediate: true, clearOrigin: true });
     const current = entries[activeId];
-    current.state = cameraState(camera, controls);
     current.deactivate();
+    current.state = cameraState(camera, controls);
     current.scene.visible = false;
     activeId = nextId;
     const next = entries[activeId];
@@ -204,6 +204,7 @@ export function createSceneSwitcher(gui, {
   controller = folder.add(parameters, 'scene', Object.values(SCENE_LABELS)).name('当前场景')
     .onChange((label) => switchTo(byLabel[label]));
   folder.add({ resetView() {
+    if (activeId === 'paper') paper.skipIntro();
     const entry = entries[activeId];
     entry.state = cloneState(entry.initial);
     parallax.resetInput({ immediate: true, clearOrigin: true });

@@ -19,6 +19,7 @@ try {
   await b.send('Network.setBlockedURLs', { urls: [] });
   await b.click(panel, '重试模型加载');
   await b.until(`document.querySelector('.viewer-paper-status').dataset.kind === 'ready'`);
+  await b.click(panel, '跳过入场');
   report.failureRecovery = true;
   await b.evaluate(`window.paperScene = __observed.findLast(o => o.name === '场景5·纸飞机环游');
     window.aircraft = paperScene.getObjectByName('万架纸飞机·GPU航道');
